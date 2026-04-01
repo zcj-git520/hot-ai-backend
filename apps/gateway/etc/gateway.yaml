@@ -1,0 +1,45 @@
+Name: hot-ai-gateway
+Host: 0.0.0.0
+Port: 8000
+
+# JWT 配置
+Auth:
+  AccessSecret: your-secret-key-change-in-production
+  AccessExpire: 86400
+
+# 限流配置
+Limit:
+  MaxRequests: 1000
+  Window: 60
+
+# CORS 配置
+CORS:
+  AllowOrigins: ["http://localhost:3000"]
+  AllowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+  AllowHeaders: ["Content-Type", "Authorization"]
+
+# 日志配置
+Log:
+  Mode: file
+  Path: logs/gateway.log
+  Level: info
+  Encoding: json
+
+DataSource:
+  MySQL:
+    DSN: root:shds@Admin123@tcp(192.168.50.109:13306)/hot_ai?charset=utf8mb4&parseTime=true&loc=Local
+
+# Consul 配置
+Consul:
+  Host: 192.168.110.79
+  Port: 8500
+  Key: services/gateway
+
+# 邮件配置
+Mail:
+  SMTPServer: smtp.qq.com        # SMTP 服务器地址（开发环境可留空，使用日志模式）
+  SMTPPort: 587                        # SMTP 端口
+  Username: hot-ai@qq.com              # 邮箱账号
+  Password: phcdaaqhizdpbcef           # 邮箱授权码或应用专用密码
+  FromName: Hot AI                     # 发件人名称
+  FromEmail: hot-ai@qq.com             # 发件人邮箱（必须与 Username 一致）

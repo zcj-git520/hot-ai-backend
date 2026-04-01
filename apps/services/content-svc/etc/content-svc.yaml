@@ -1,0 +1,28 @@
+Name: content-svc
+ListenOn: 0.0.0.0:8881
+
+# Consul 配置
+Consul:
+  Host: localhost
+  Port: 8500
+  Key: services/content-svc
+
+# 数据库配置
+DataSource:
+  MySQL:
+    DSN: root:shds@Admin123@tcp(192.168.50.109:13306)/hot_ai?charset=utf8mb4&parseTime=true&loc=Local
+  MongoDB:
+    URI: mongodb://localhost:27017
+    Database: hot_ai_articles
+
+# Redis 配置
+Redis:
+  Host: 192.168.41.63:16379
+  Type: node
+
+# 日志配置
+Log:
+  Mode: file
+  Path: logs/content-svc.log
+  Level: info
+  Encoding: json

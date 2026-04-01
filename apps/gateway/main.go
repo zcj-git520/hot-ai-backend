@@ -1,0 +1,164 @@
+package main
+
+import (
+	"flag"
+	"fmt"
+	"net/http"
+	"os"
+
+	"github.com/zeromicro/go-zero/core/conf"
+	"github.com/zeromicro/go-zero/rest"
+
+	"hot-ai-backend/apps/gateway/handler"
+	"hot-ai-backend/apps/gateway/middleware"
+	"hot-ai-backend/internal/database"
+	"hot-ai-backend/internal/repository"
+	"hot-ai-backend/internal/service"
+	"hot-ai-backend/internal/utils/mailutil"
+)
+
+var configFile = flag.String("f", "apps/gateway/etc/gateway.yaml", "the config file")
+
+// GatewayConf 网关配置
+type GatewayConf struct {
+	rest.RestConf
+	Auth struct {
+		AccessSecret string `json:",default=your-secret-key-change-in-production"`
+		AccessExpire int    `json:",default=86400"`
+	}
+	// 数据库配置
+	DataSource struct {
+		MySQL struct {
+			DSN string `json:",optional"`
+		}
+	}
+	// 邮件配置
+	Mail struct {
+		SMTPServer string `json:",optional, default="`
+		SMTPPort   int    `json:",default=587"`
+		Username   string `json:",optional"`
+		Password   string `json:",optional"`
+		FromName   string `json:",default=Hot AI"`
+		FromEmail  string `json:",optional"`
+	}
+}
+
+func main() {
+	flag.Parse()
+
+	var c GatewayConf
+	if err := conf.Load(*configFile, &c); err != nil {
+		fmt.Fprintf(os.Stderr, "load config error: %v\n", err)
+		os.Exit(1)
+	}
+
+	// 初始化数据库
+	if c.DataSource.MySQL.DSN != "" {
+		// 从 DSN 字符串解析数据库配置
+		dbConfig, err := database.ParseDSN(c.DataSource.MySQL.DSN)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "parse DSN error: %v\n", err)
+			os.Exit(1)
+		}
+
+		if err := database.InitDB(*dbConfig); err != nil {
+			fmt.Fprintf(os.Stderr, "init database error: %v\n", err)
+			os.Exit(1)
+		}
+
+		// 自动迁移表结构
+		if err := database.AutoMigrate(); err != nil {
+			fmt.Fprintf(os.Stderr, "auto migrate error: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("Database initialized successfully")
+	} else {
+		fmt.Println("[警告] 未配置数据库，将使用内存模式（仅用于测试）")
+	}
+
+	// 创建服务器
+	server := rest.MustNewServer(c.RestConf, rest.WithCors())
+	defer server.Stop()
+
+	// 中间件
+	authMiddleware := middleware.NewAuthMiddleware(c.Auth.AccessSecret, int64(c.Auth.AccessExpire))
+
+	// 初始化服务层（依赖注入）
+	userRepo := repository.NewUserRepository()
+	authService := service.NewAuthService(userRepo, nil, c.Auth.AccessSecret)
+
+	// 配置邮件服务
+	if c.Mail.SMTPServer != "" {
+		authService.SetSMTPConfig(&mailutil.SMTPConfig{
+			Server:    c.Mail.SMTPServer,
+			Port:      c.Mail.SMTPPort,
+			Username:  c.Mail.Username,
+			Password:  c.Mail.Password,
+			FromName:  c.Mail.FromName,
+			FromEmail: c.Mail.FromEmail,
+		})
+	} else {
+		fmt.Println("[提示] 未配置 SMTP，将使用日志模式发送邮件验证码")
+	}
+
+	// 注册业务路由
+	registerRoutes(server, authMiddleware, authService)
+
+	fmt.Printf("Starting gateway at %s:%d...\n", c.Host, c.Port)
+
+	server.Start()
+}
+
+// registerRoutes 注册所有业务路由
+func registerRoutes(server *rest.Server, authMiddleware *middleware.AuthMiddleware, authService *service.AuthService) {
+	// 创建处理器并注入依赖
+	authHandler := handler.NewAuthHandler()
+	authHandler.SetAuthService(authService)
+
+	// ===== 认证路由 (公开) =====
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPost,
+		Path:    "/api/auth/register",
+		Handler: authHandler.Register,
+	})
+
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPost,
+		Path:    "/api/auth/send-registration-code",
+		Handler: authHandler.SendRegistrationCode,
+	})
+
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPost,
+		Path:    "/api/auth/login",
+		Handler: authHandler.Login,
+	})
+
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPost,
+		Path:    "/api/auth/refresh",
+		Handler: authHandler.RefreshToken,
+	})
+
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPost,
+		Path:    "/api/auth/send-verification-email",
+		Handler: authHandler.SendVerificationEmail,
+	})
+
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/api/auth/verify-email",
+		Handler: authHandler.VerifyEmail,
+	})
+
+	// ===== 认证路由 (需要认证) =====
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPost,
+		Path:    "/api/auth/logout",
+		Handler: authMiddleware.Handle(authHandler.Logout),
+	})
+}
+
+

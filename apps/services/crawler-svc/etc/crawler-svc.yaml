@@ -1,0 +1,39 @@
+Name: crawler-svc
+
+# Consul 配置
+Consul:
+  Host: localhost
+  Port: 8500
+  Key: services/crawler-svc
+
+# 数据库配置
+DataSource:
+  MySQL:
+    DSN: root:shds@Admin123@tcp(192.168.50.109:13306)/hot_ai?charset=utf8mb4&parseTime=true&loc=Local
+  MongoDB:
+    URI: mongodb://localhost:27017
+    Database: hot_ai_articles
+
+# Redis 配置
+Redis:
+  Host: 192.168.41.63:16379
+  Type: node
+
+# AI 配置
+AI:
+  Provider: ali-yun-tongyi
+  APIKey: your-api-key-here
+  Model: qwen-max
+
+# 抓取配置
+Crawler:
+  ConcurrentFetch: 10
+  FetchInterval: 300
+  MaxRetries: 3
+
+# 日志配置
+Log:
+  Mode: file
+  Path: logs/crawler-svc.log
+  Level: info
+  Encoding: json
