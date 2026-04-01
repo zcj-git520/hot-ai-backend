@@ -124,6 +124,35 @@ func (c *EmailCache) DeleteVerificationCode(ctx context.Context, email string) e
 	return c.client.Del(ctx, key).Err()
 }
 
+// StoreCode 通用方法：存储任意 key-value（用于黑名单、临时数据等场景）
+func (c *EmailCache) StoreCode(ctx context.Context, key string, value string, expire time.Duration) error {
+	return c.client.Set(ctx, key, value, expire).Err()
+}
+
+// GetCode 通用方法：获取存储的值
+func (c *EmailCache) GetCode(ctx context.Context, key string) (string, error) {
+	val, err := c.client.Get(ctx, key).Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return "", ErrCodeNotFound
+		}
+		return "", fmt.Errorf("failed to get code: %w", err)
+	}
+	return val, nil
+}
+
+// DeleteCode 通用方法：删除指定的 key
+func (c *EmailCache) DeleteCode(ctx context.Context, key string) error {
+	return c.client.Del(ctx, key).Err()
+}
+
+// IsBlacklisted 检查 Token 是否在黑名单中
+func (c *EmailCache) IsBlacklisted(ctx context.Context, hashedToken string) bool {
+	blacklistKey := "auth:blacklist:" + hashedToken
+	_, err := c.GetCode(ctx, blacklistKey)
+	return err == nil
+}
+
 func (c *EmailCache) getVerifyCodeKey(email string) string {
 	return fmt.Sprintf("%scode:%s", c.prefix, email)
 }

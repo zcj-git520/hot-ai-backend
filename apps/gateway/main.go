@@ -86,7 +86,10 @@ func main() {
 
 	// 初始化服务层（依赖注入）
 	userRepo := repository.NewUserRepository()
-	authService := service.NewAuthService(userRepo, nil, c.Auth.AccessSecret)
+	favoriteRepo := repository.NewFavoriteRepository()
+	authService := service.NewAuthService(userRepo, favoriteRepo, c.Auth.AccessSecret)
+	userService := service.NewUserService(userRepo, favoriteRepo)
+	favoriteService := service.NewFavoriteService(favoriteRepo)
 
 	// 配置邮件服务
 	if c.Mail.SMTPServer != "" {
@@ -103,7 +106,7 @@ func main() {
 	}
 
 	// 注册业务路由
-	registerRoutes(server, authMiddleware, authService)
+	registerRoutes(server, authMiddleware, authService, userService, favoriteService)
 
 	fmt.Printf("Starting gateway at %s:%d...\n", c.Host, c.Port)
 
@@ -111,10 +114,13 @@ func main() {
 }
 
 // registerRoutes 注册所有业务路由
-func registerRoutes(server *rest.Server, authMiddleware *middleware.AuthMiddleware, authService *service.AuthService) {
+func registerRoutes(server *rest.Server, authMiddleware *middleware.AuthMiddleware, authService *service.AuthService, userService *service.UserService, favoriteService *service.FavoriteService) {
 	// 创建处理器并注入依赖
 	authHandler := handler.NewAuthHandler()
 	authHandler.SetAuthService(authService)
+
+	// 创建用户处理器并注入依赖
+	userHandler := handler.NewUserHandler(userService, favoriteService)
 
 	// ===== 认证路由 (公开) =====
 	server.AddRoute(rest.Route{
@@ -158,6 +164,53 @@ func registerRoutes(server *rest.Server, authMiddleware *middleware.AuthMiddlewa
 		Method:  http.MethodPost,
 		Path:    "/api/auth/logout",
 		Handler: authMiddleware.Handle(authHandler.Logout),
+	})
+
+	// ===== 用户路由 (需要认证) =====
+	// 获取/更新用户资料
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/api/user/profile",
+		Handler: authMiddleware.Handle(userHandler.GetProfile),
+	})
+
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPut,
+		Path:    "/api/user/profile",
+		Handler: authMiddleware.Handle(userHandler.UpdateProfile),
+	})
+
+	// 更新用户偏好
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPut,
+		Path:    "/api/user/preferences",
+		Handler: authMiddleware.Handle(userHandler.UpdatePreferences),
+	})
+
+	// 修改密码
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPost,
+		Path:    "/api/user/change-password",
+		Handler: authMiddleware.Handle(userHandler.ChangePassword),
+	})
+
+	// 收藏管理
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/api/user/favorites",
+		Handler: authMiddleware.Handle(userHandler.GetFavorites),
+	})
+
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPost,
+		Path:    "/api/user/favorites",
+		Handler: authMiddleware.Handle(userHandler.AddFavorite),
+	})
+
+	server.AddRoute(rest.Route{
+		Method:  http.MethodDelete,
+		Path:    "/api/user/favorites/{id}",
+		Handler: authMiddleware.Handle(userHandler.DeleteFavorite),
 	})
 }
 

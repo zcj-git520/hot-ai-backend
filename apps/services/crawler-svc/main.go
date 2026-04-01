@@ -1,11 +1,16 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/zeromicro/go-zero/core/conf"
+	"hot-ai-backend/internal/crawler"
 )
 
 var configFile = flag.String("f", "etc/crawler-svc.yaml", "the config file")
@@ -13,26 +18,30 @@ var configFile = flag.String("f", "etc/crawler-svc.yaml", "the config file")
 func main() {
 	flag.Parse()
 
-	var c conf.Config
+	var c crawler.CrawlerConf
 	if err := conf.Load(*configFile, &c); err != nil {
 		fmt.Fprintf(os.Stderr, "load config error: %v\n", err)
 		os.Exit(1)
 	}
 
+	// 初始化日志
+	crawler.InitLog(c)
+
 	fmt.Println("Starting crawler-svc...")
 
-	// TODO: 初始化采集服务
-	// 1. 启动定时任务调度器
-	// 2. 启动 Redis Stream 消费者
-	// 3. 初始化 AI 处理模块
+	// 创建服务上下文
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	startCrawlerService(c)
-}
+	// 启动采集服务
+	crawler.StartCrawlerService(ctx, c)
 
-func startCrawlerService(c conf.Config) {
-	// 待实现
-	// 1. 从数据库读取抓取源
-	// 2. 定时执行抓取任务
-	// 3. 内容清洗和去重
-	// 4. 发布 ArticleCreated 事件到 Redis Stream
+	// 等待退出信号
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	fmt.Println("Shutting down crawler-svc...")
+	cancel()
+	time.Sleep(time.Second * 2) // 等待 goroutine 清理
 }

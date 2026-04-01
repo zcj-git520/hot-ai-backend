@@ -268,8 +268,37 @@ func (s *AuthService) RefreshToken(ctx context.Context, req *RefreshTokenRequest
 
 // Logout 登出
 func (s *AuthService) Logout(ctx context.Context, accessToken string) error {
-	// TODO: 将 Token 加入黑名单（Redis 实现）
-	// 这里暂时只记录日志
+	// 1. 解析 Token，获取用户信息
+	claims, err := jwtutil.ParseAccessToken(s.jwtConfig, accessToken)
+	if err != nil {
+		// Token 无效或已过期，但仍返回成功（幂等性）
+		fmt.Printf("[登出] Token 无效或已过期：%v\n", err)
+		return nil
+	}
+
+	// 2. 将 Token 加入黑名单（防止 Token 在有效期内被重复使用）
+	if s.emailCache != nil {
+		// 计算 Token 剩余有效期
+		expiresAt := claims.ExpiresAt.Time
+		remainingTime := time.Until(expiresAt)
+		
+		if remainingTime > 0 {
+			// 对 Token 进行哈希处理（避免存储原始 token）
+			hashedToken := jwtutil.HashToken(accessToken)
+			blacklistKey := "auth:blacklist:" + hashedToken
+			
+			// 存储到黑名单，有效期为 Token 剩余时间
+			err = s.emailCache.StoreCode(ctx, blacklistKey, claims.UserID, remainingTime)
+			if err != nil {
+				fmt.Printf("[警告] 将 Token 加入黑名单失败：%v\n", err)
+			}
+		}
+	}
+
+	// 3. 记录登出日志
+	fmt.Printf("[登出] 用户登出：userID=%s, email=unknown, time=%s\n", 
+		claims.UserID, time.Now().Format("2006-01-02 15:04:05"))
+
 	return nil
 }
 

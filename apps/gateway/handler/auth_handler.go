@@ -315,19 +315,54 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: 实现刷新 Token 逻辑
-	resp := types.RefreshTokenResponse{
-		AccessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-		ExpiresIn:   86400,
+	// 1. 校验 Refresh Token 非空
+	if req.RefreshToken == "" {
+		httpx.ErrorCtx(r.Context(), w, types.NewBadRequestError("Refresh Token 不能为空"))
+		return
 	}
 
+	// 2. 转换为 service 层的请求类型
+	serviceReq := &service.RefreshTokenRequest{
+		RefreshToken: req.RefreshToken,
+	}
+
+	// 3. 调用服务层处理刷新 Token 逻辑
+	resp, err := h.authService.RefreshToken(r.Context(), serviceReq)
+	if err != nil {
+		httpx.ErrorCtx(r.Context(), w, err)
+		return
+	}
+
+	// 4. 返回成功响应
 	httpx.OkJsonCtx(r.Context(), w, resp)
 }
 
 // Logout 用户登出
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	// TODO: 实现登出逻辑
-	httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{
-		"success": true,
-	})
+	// 1. 从请求头中获取 Access Token
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		httpx.ErrorCtx(r.Context(), w, types.NewBadRequestError("缺少认证信息"))
+		return
+	}
+
+	// 2. 提取 Token（格式：Bearer <token>）
+	var accessToken string
+	parts := strings.Split(authHeader, " ")
+	if len(parts) == 2 && parts[0] == "Bearer" {
+		accessToken = parts[1]
+	} else {
+		httpx.ErrorCtx(r.Context(), w, types.NewBadRequestError("Token 格式不正确"))
+		return
+	}
+
+	// 3. 调用服务层处理登出逻辑
+	err := h.authService.Logout(r.Context(), accessToken)
+	if err != nil {
+		httpx.ErrorCtx(r.Context(), w, err)
+		return
+	}
+
+	// 4. 返回成功响应
+	httpx.OkJsonCtx(r.Context(), w, types.SuccessWithMessage("登出成功", nil))
 }
