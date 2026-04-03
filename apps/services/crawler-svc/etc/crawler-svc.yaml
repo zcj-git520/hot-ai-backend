@@ -16,8 +16,9 @@ DataSource:
 
 # Redis 配置
 Redis:
-  Host: 192.168.41.63:16379
-  Type: node
+  Host: 192.168.41.63
+  Port: 16379
+  Password: Shds@402
 
 # AI 配置
 AI:

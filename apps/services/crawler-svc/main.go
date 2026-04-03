@@ -13,7 +13,7 @@ import (
 	"hot-ai-backend/internal/crawler"
 )
 
-var configFile = flag.String("f", "etc/crawler-svc.yaml", "the config file")
+var configFile = flag.String("f", "D:\\hot-ai\\hot-ai-backend\\apps\\services\\crawler-svc\\etc\\crawler-svc.yaml", "the config file")
 
 func main() {
 	flag.Parse()

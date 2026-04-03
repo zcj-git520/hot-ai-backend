@@ -64,6 +64,8 @@ func AutoMigrate() error {
 		&models.RolePermission{},
 		&models.Favorite{},
 		&models.RefreshToken{},
+		&models.CrawlerSource{},
+		&models.CrawlerFetchLog{},
 	)
 
 	if err != nil {
