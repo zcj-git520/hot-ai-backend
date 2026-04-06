@@ -66,6 +66,14 @@ func AutoMigrate() error {
 		&models.RefreshToken{},
 		&models.CrawlerSource{},
 		&models.CrawlerFetchLog{},
+		&models.Article{},
+		&models.Category{},
+		&models.Source{},
+		&models.Tag{},
+		&models.ArticleStats{},
+		&models.ArticleTagRelation{},
+		&models.Profession{},
+		&models.RiskLevelInfo{},
 	)
 
 	if err != nil {

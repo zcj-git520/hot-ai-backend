@@ -1,11 +1,6 @@
 Name: content-svc
-ListenOn: 0.0.0.0:8881
-
-# Consul 配置
-Consul:
-  Host: localhost
-  Port: 8500
-  Key: services/content-svc
+Host: 0.0.0.0
+Port: 8001
 
 # 数据库配置
 DataSource:

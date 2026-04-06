@@ -66,11 +66,11 @@ func main() {
 			os.Exit(1)
 		}
 
-		// 自动迁移表结构
-		if err := database.AutoMigrate(); err != nil {
-			fmt.Fprintf(os.Stderr, "auto migrate error: %v\n", err)
-			os.Exit(1)
-		}
+		//// 自动迁移表结构
+		//if err := database.AutoMigrate(); err != nil {
+		//	fmt.Fprintf(os.Stderr, "auto migrate error: %v\n", err)
+		//	os.Exit(1)
+		//}
 
 		fmt.Println("Database initialized successfully")
 	} else {
@@ -213,5 +213,3 @@ func registerRoutes(server *rest.Server, authMiddleware *middleware.AuthMiddlewa
 		Handler: authMiddleware.Handle(userHandler.DeleteFavorite),
 	})
 }
-
-

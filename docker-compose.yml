@@ -101,6 +101,62 @@ services:
     depends_on:
       - prometheus
 
+  # ========== 应用服务 ==========
+  # Content Service - 内容微服务
+  content-svc:
+    build:
+      context: .
+      dockerfile: Dockerfile.content-svc
+    container_name: hot-ai-content-svc
+    environment:
+      - DB_DSN=${DB_USER:-hot_ai}:${DB_PASSWORD:-hotai123}@tcp(mysql:3306)/hot_ai?charset=utf8mb4&parseTime=True&loc=Local
+    ports:
+      - "8001:8001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - hot-ai-network
+    restart: unless-stopped
+
+  # Gateway - API网关
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    container_name: hot-ai-gateway
+    environment:
+      - DB_DSN=${DB_USER:-hot_ai}:${DB_PASSWORD:-hotai123}@tcp(mysql:3306)/hot_ai?charset=utf8mb4&parseTime=True&loc=Local
+      - CONTENT_SVC_URL=http://content-svc:8001
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret-key-change-in-production}
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      content-svc:
+        condition: service_started
+    networks:
+      - hot-ai-network
+    restart: unless-stopped
+
+  # Nginx - 反向代理和负载均衡
+  nginx:
+    image: nginx:alpine
+    container_name: hot-ai-nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/logs:/var/log/nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - gateway
+      - content-svc
+    networks:
+      - hot-ai-network
+    restart: unless-stopped
+
 volumes:
   mysql_data:
   mongodb_data:
