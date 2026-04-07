@@ -14,7 +14,7 @@ func NewArticleRepository() *ArticleRepository {
 }
 
 // GetList 获取文章列表(支持分页和分类筛选)
-func (r *ArticleRepository) GetList(page, pageSize int, categoryCode string) ([]models.Article, int64, error) {
+func (r *ArticleRepository) GetList(page, pageSize int, categoryCode string, keyword string) ([]models.Article, int64, error) {
 	var articles []models.Article
 	var total int64
 
@@ -24,6 +24,12 @@ func (r *ArticleRepository) GetList(page, pageSize int, categoryCode string) ([]
 	if categoryCode != "" && categoryCode != "all" {
 		query = query.Joins("JOIN categories ON articles.category_id = categories.id").
 			Where("categories.code = ?", categoryCode)
+	}
+
+	// 关键词搜索 - 匹配标题和摘要
+	if keyword != "" {
+		searchPattern := "%" + keyword + "%"
+		query = query.Where("articles.title LIKE ? OR articles.summary LIKE ?", searchPattern, searchPattern)
 	}
 
 	// 获取总数

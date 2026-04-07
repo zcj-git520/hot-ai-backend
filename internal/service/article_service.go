@@ -23,14 +23,16 @@ type GetArticlesRequest struct {
 	Page     int    `json:"page"`
 	PageSize int    `json:"page_size"`
 	Category string `json:"category"`
+	Keyword  string `json:"keyword"`
 }
 
 // GetArticlesResponse 获取文章列表响应
 type GetArticlesResponse struct {
-	Articles []models.Article `json:"articles"`
-	Total    int64            `json:"total"`
-	Page     int              `json:"page"`
-	PageSize int              `json:"page_size"`
+	Articles    []models.Article `json:"articles"`
+	Total       int64            `json:"total"`
+	TotalPages  int              `json:"total_pages"`
+	Page        int              `json:"page"`
+	PageSize    int              `json:"page_size"`
 }
 
 // GetArticles 获取文章列表
@@ -43,16 +45,22 @@ func (s *ArticleService) GetArticles(req *GetArticlesRequest) (*GetArticlesRespo
 		req.PageSize = 10
 	}
 
-	articles, total, err := s.articleRepo.GetList(req.Page, req.PageSize, req.Category)
+	articles, total, err := s.articleRepo.GetList(req.Page, req.PageSize, req.Category, req.Keyword)
 	if err != nil {
 		return nil, err
 	}
 
+	totalPages := int(total) / req.PageSize
+	if int(total)%req.PageSize > 0 {
+		totalPages++
+	}
+
 	return &GetArticlesResponse{
-		Articles: articles,
-		Total:    total,
-		Page:     req.Page,
-		PageSize: req.PageSize,
+		Articles:   articles,
+		Total:      total,
+		TotalPages: totalPages,
+		Page:       req.Page,
+		PageSize:   req.PageSize,
 	}, nil
 }
 

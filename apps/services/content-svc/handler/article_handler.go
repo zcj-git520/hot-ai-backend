@@ -26,6 +26,7 @@ func (h *ArticleHandler) GetArticles(w http.ResponseWriter, r *http.Request) {
 	page := 1
 	pageSize := 10
 	category := r.URL.Query().Get("category")
+	keyword := r.URL.Query().Get("keyword")
 
 	if p := r.URL.Query().Get("page"); p != "" {
 		fmt.Sscanf(p, "%d", &page)
@@ -38,6 +39,7 @@ func (h *ArticleHandler) GetArticles(w http.ResponseWriter, r *http.Request) {
 		Page:     page,
 		PageSize: pageSize,
 		Category: category,
+		Keyword:  keyword,
 	})
 	if err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)

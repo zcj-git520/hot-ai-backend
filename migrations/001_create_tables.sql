@@ -4,8 +4,26 @@
 -- 日期: 2026-04-06
 -- ======================================================
 
-CREATE DATABASE IF NOT EXISTS hot_ai CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE hot_ai;
+-- 删除已存在的数据库（如果存在且需要完全重建）
+-- 注意：这会删除整个数据库，谨慎使用！
+-- DROP DATABASE IF EXISTS hot_ai;
+
+-- 或者只删除表（保留数据库）
+-- 按依赖顺序倒序删除（先删除有外键依赖的表）
+SET FOREIGN_KEY_CHECKS = 0;
+
+DROP TABLE IF EXISTS `article_tag_relation`;
+DROP TABLE IF EXISTS `article_stats`;
+DROP TABLE IF EXISTS `articles`;
+DROP TABLE IF EXISTS `tags`;
+DROP TABLE IF EXISTS `sources`;
+DROP TABLE IF EXISTS `categories`;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- 创建数据库（如果不存在）
+CREATE DATABASE IF NOT EXISTS `hot_ai` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `hot_ai`;
 
 -- 1. 分类表
 CREATE TABLE `categories` (
@@ -28,7 +46,7 @@ CREATE TABLE `sources` (
   `name` varchar(100) NOT NULL COMMENT '来源名称',
   `domain` varchar(200) NOT NULL COMMENT '域名',
   `logo_url` varchar(500) DEFAULT NULL COMMENT 'Logo地址',
-  `description` text DEFAULT NULL COMMENT '来源描述',
+  `description` text COMMENT '来源描述',
   `reliability_score` tinyint DEFAULT '5' COMMENT '可信度评分 1-10',
   `status` tinyint DEFAULT '1' COMMENT '状态: 0-禁用, 1-启用',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
