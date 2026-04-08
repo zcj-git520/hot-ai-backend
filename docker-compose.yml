@@ -119,6 +119,23 @@ services:
       - hot-ai-network
     restart: unless-stopped
 
+  # Learning Path Service - 学习路径微服务
+  learning-path-svc:
+    build:
+      context: .
+      dockerfile: Dockerfile.learning-path-svc
+    container_name: hot-ai-learning-path-svc
+    environment:
+      - MYSQL_DSN=${DB_USER:-hot_ai}:${DB_PASSWORD:-hotai123}@tcp(mysql:3306)/hot_ai?charset=utf8mb4&parseTime=True&loc=Local
+    ports:
+      - "8003:8003"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - hot-ai-network
+    restart: unless-stopped
+
   # Gateway - API网关
   gateway:
     build:

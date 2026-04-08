@@ -1,0 +1,20 @@
+Name: profession-svc
+Host: 0.0.0.0
+Port: 8002
+
+# 数据库配置
+DataSource:
+  MySQL:
+    DSN: root:shds@Admin123@tcp(192.168.50.109:13306)/hot_ai?charset=utf8mb4&parseTime=true&loc=Local
+
+# Redis 配置
+Redis:
+  Host: 192.168.41.63:16379
+  Type: node
+
+# 日志配置
+Log:
+  Mode: file
+  Path: logs/profession-svc.log
+  Level: info
+  Encoding: json

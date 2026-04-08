@@ -30,6 +30,8 @@ tags:
     description: 用户信息管理相关接口
   - name: 文章
     description: 文章资讯相关接口
+  - name: 职业风险
+    description: 职业风险分析相关接口
 
 paths:
   /auth/register:
@@ -622,6 +624,187 @@ paths:
                 $ref: '#/components/schemas/CommonResponse'
         '500':
           description: 服务器错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  # ============ 职业风险模块接口 ============
+  /professions/categories:
+    get:
+      tags:
+        - 职业风险
+      summary: 获取职业分类列表
+      description: 获取所有职业分类信息
+      operationId: getProfessionCategories
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProfessionCategory'
+              example:
+                - id: 1
+                  name: 技术类
+                  description: 技术开发、运维等相关职业
+                  sort_order: 1
+                  status: 1
+
+  /professions/risk-levels:
+    get:
+      tags:
+        - 职业风险
+      summary: 获取风险等级信息
+      description: 获取所有风险等级及其说明
+      operationId: getRiskLevels
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RiskLevelInfo'
+              example:
+                - id: extreme
+                  level: extreme
+                  name: 极高风险
+                  icon: 🔴
+                  description: 该职业面临极高的自动化替代风险
+                  color: '#EF4444'
+                  min_score: 80
+                  max_score: 100
+
+  /professions:
+    get:
+      tags:
+        - 职业风险
+      summary: 获取职业列表
+      description: 获取职业列表，支持分页、分类筛选、风险等级筛选和关键词搜索
+      operationId: getProfessions
+      parameters:
+        - name: page
+          in: query
+          description: 页码(从1开始)
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          example: 1
+        - name: page_size
+          in: query
+          description: 每页数量(1-100)
+          required: false
+          schema:
+            type: integer
+            default: 12
+            minimum: 1
+            maximum: 100
+          example: 12
+        - name: category_id
+          in: query
+          description: 分类ID
+          required: false
+          schema:
+            type: integer
+          example: 1
+        - name: risk_level
+          in: query
+          description: 风险等级(extreme/high/medium/low)
+          required: false
+          schema:
+            type: string
+            enum: [extreme, high, medium, low]
+          example: high
+        - name: keyword
+          in: query
+          description: 关键词搜索
+          required: false
+          schema:
+            type: string
+          example: 程序员
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfessionListResponse'
+
+  /professions/search:
+    get:
+      tags:
+        - 职业风险
+      summary: 搜索职业
+      description: 根据关键词搜索职业
+      operationId: searchProfessions
+      parameters:
+        - name: q
+          in: query
+          description: 搜索关键词
+          required: true
+          schema:
+            type: string
+          example: 程序员
+        - name: page
+          in: query
+          description: 页码
+          required: false
+          schema:
+            type: integer
+            default: 1
+          example: 1
+        - name: page_size
+          in: query
+          description: 每页数量
+          required: false
+          schema:
+            type: integer
+            default: 12
+          example: 12
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfessionListResponse'
+        '400':
+          description: 缺少搜索关键词
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /professions/{slug}:
+    get:
+      tags:
+        - 职业风险
+      summary: 获取职业详情
+      description: 根据 slug 获取职业详细信息，包括影响分析、转型建议和市场数据
+      operationId: getProfessionBySlug
+      parameters:
+        - name: slug
+          in: path
+          description: 职业唯一标识(slug)
+          required: true
+          schema:
+            type: string
+          example: software-engineer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfessionDetailResponse'
+        '404':
+          description: 职业不存在
           content:
             application/json:
               schema:
@@ -1487,6 +1670,335 @@ components:
               format: date-time
               description: 更新时间
               example: '2026-03-30T10:00:00Z'
+
+    # ============ 职业风险模块数据模型 ============
+    ProfessionCategory:
+      type: object
+      description: 职业分类
+      properties:
+        id:
+          type: integer
+          description: 分类ID
+          example: 1
+        name:
+          type: string
+          description: 分类名称
+          example: 技术类
+        description:
+          type: string
+          description: 分类描述
+          example: 技术开发、运维等相关职业
+        sort_order:
+          type: integer
+          description: 排序顺序
+          example: 1
+        status:
+          type: integer
+          description: 状态(0-待审核, 1-已发布, 2-已删除)
+          example: 1
+
+    RiskLevelInfo:
+      type: object
+      description: 风险等级信息
+      properties:
+        id:
+          type: string
+          description: 等级ID
+          example: extreme
+        level:
+          type: string
+          description: 等级代码
+          enum: [extreme, high, medium, low]
+          example: extreme
+        name:
+          type: string
+          description: 等级名称
+          example: 极高风险
+        icon:
+          type: string
+          description: 图标
+          example: 🔴
+        description:
+          type: string
+          description: 等级描述
+          example: 该职业面临极高的自动化替代风险
+        color:
+          type: string
+          description: 颜色值(十六进制)
+          example: '#EF4444'
+        min_score:
+          type: integer
+          description: 最小分数
+          example: 80
+        max_score:
+          type: integer
+          description: 最大分数
+          example: 100
+
+    ProfessionBrief:
+      type: object
+      description: 职业简要信息(列表项)
+      properties:
+        id:
+          type: integer
+          description: 职业ID
+          example: 1
+        name:
+          type: string
+          description: 职业名称
+          example: 软件工程师
+        slug:
+          type: string
+          description: 职业唯一标识
+          example: software-engineer
+        icon:
+          type: string
+          description: 图标
+          example: 💻
+        category_id:
+          type: integer
+          description: 分类ID
+          example: 1
+        category_name:
+          type: string
+          description: 分类名称
+          example: 技术类
+        description:
+          type: string
+          description: 职业描述
+          example: 从事软件开发、维护的专业技术人员
+        risk_level:
+          type: string
+          description: 风险等级
+          enum: [extreme, high, medium, low]
+          example: medium
+        risk_score:
+          type: integer
+          description: 风险分数
+          example: 55
+        automation_rate:
+          type: integer
+          description: 自动化率(%)
+          example: 50
+        view_count:
+          type: integer
+          description: 浏览量
+          example: 1234
+
+    ProfessionImpactAnalysis:
+      type: object
+      description: 职业影响分析
+      properties:
+        affected_tasks:
+          type: array
+          description: 受影响的任务列表
+          items:
+            type: string
+          example: ["代码生成", "单元测试编写", "Bug修复"]
+        safe_tasks:
+          type: array
+          description: 安全的任务列表
+          items:
+            type: string
+          example: ["系统架构设计", "需求分析", "技术选型"]
+        safe_skills:
+          type: array
+          description: 安全技能列表
+          items:
+            type: string
+          example: ["系统设计能力", "业务理解能力", "团队协作能力"]
+        impact_timeline:
+          type: object
+          description: 影响时间线
+          properties:
+            short_term:
+              type: string
+              description: 短期影响
+              example: AI辅助编程工具将提高开发效率
+            mid_term:
+              type: string
+              description: 中期影响
+              example: 部分重复性编码工作将被自动化
+            long_term:
+              type: string
+              description: 长期影响
+              example: 需要向系统设计和架构方向转型
+        impact_summary:
+          type: string
+          description: 影响总结
+          example: AI将在短期内提升开发效率，但长期来看，软件工程师需要向更高层次的系统设计和业务理解方向发展
+
+    TransitionPath:
+      type: object
+      description: 转型路径
+      properties:
+        title:
+          type: string
+          description: 路径标题
+          example: 系统架构师路径
+        steps:
+          type: array
+          description: 步骤列表
+          items:
+            type: string
+          example: ["学习分布式系统", "掌握云原生技术", "积累架构设计经验"]
+
+    ProfessionTransitionAdvice:
+      type: object
+      description: 职业转型建议
+      properties:
+        transition_paths:
+          type: array
+          description: 转型路径列表
+          items:
+            type: string
+          example: ["系统架构师", "技术经理", "产品经理"]
+        recommended_skills:
+          type: array
+          description: 推荐技能列表
+          items:
+            type: string
+          example: ["云原生架构", "分布式系统设计", "业务领域知识"]
+        recommended_tools:
+          type: array
+          description: 推荐工具列表
+          items:
+            type: string
+          example: ["Kubernetes", "Terraform", "Docker"]
+        recommended_paths:
+          type: array
+          description: 推荐学习路径
+          items:
+            $ref: '#/components/schemas/TransitionPath'
+        related_articles:
+          type: array
+          description: 相关文章ID列表
+          items:
+            type: integer
+          example: [1, 2, 3]
+        advice_summary:
+          type: string
+          description: 建议总结
+          example: 建议向系统架构和技术管理方向发展，加强业务理解能力
+
+    ProfessionMarketData:
+      type: object
+      description: 职业市场数据
+      properties:
+        market_trend:
+          type: string
+          description: 市场趋势
+          enum: [growing, stable, declining]
+          example: growing
+        market_trend_description:
+          type: string
+          description: 市场趋势描述
+          example: 数字化转型推动软件工程师需求持续增长
+        salary_impact:
+          type: string
+          description: 薪资影响
+          enum: [positive, neutral, negative]
+          example: positive
+        salary_change_rate:
+          type: number
+          format: float
+          description: 薪资变化率(%)
+          example: 8.5
+        avg_salary:
+          type: number
+          format: float
+          description: 平均薪资(元)
+          example: 25000
+        job_demand_trend:
+          type: string
+          description: 就业需求趋势
+          example: 上升
+        supply_demand_ratio:
+          type: number
+          format: float
+          description: 供需比
+          example: 1.2
+        data_source:
+          type: string
+          description: 数据来源
+          example: 拉勾网、BOSS直聘
+        data_update_date:
+          type: string
+          format: date
+          description: 数据更新日期
+          example: '2026-04-01'
+
+    ProfessionDetail:
+      type: object
+      description: 职业详细信息
+      allOf:
+        - $ref: '#/components/schemas/ProfessionBrief'
+        - type: object
+          properties:
+            impact_analysis:
+              $ref: '#/components/schemas/ProfessionImpactAnalysis'
+            transition_advice:
+              $ref: '#/components/schemas/ProfessionTransitionAdvice'
+            market_data:
+              $ref: '#/components/schemas/ProfessionMarketData'
+            created_at:
+              type: string
+              format: date-time
+              description: 创建时间
+              example: '2026-04-08T10:00:00Z'
+            updated_at:
+              type: string
+              format: date-time
+              description: 更新时间
+              example: '2026-04-08T10:00:00Z'
+
+    ProfessionListResponse:
+      type: object
+      description: 职业列表响应
+      properties:
+        code:
+          type: integer
+          description: 响应码
+          example: 200
+        message:
+          type: string
+          description: 响应消息
+          example: success
+        data:
+          type: object
+          properties:
+            professions:
+              type: array
+              description: 职业列表
+              items:
+                $ref: '#/components/schemas/ProfessionBrief'
+            total:
+              type: integer
+              description: 总数
+              example: 50
+            page:
+              type: integer
+              description: 当前页码
+              example: 1
+            page_size:
+              type: integer
+              description: 每页数量
+              example: 12
+
+    ProfessionDetailResponse:
+      type: object
+      description: 职业详情响应
+      properties:
+        code:
+          type: integer
+          description: 响应码
+          example: 200
+        message:
+          type: string
+          description: 响应消息
+          example: success
+        data:
+          $ref: '#/components/schemas/ProfessionDetail'
 
 # ============ 全局错误响应 ============
 x-error-codes:

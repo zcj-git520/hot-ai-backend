@@ -15,6 +15,7 @@ import (
 	"hot-ai-backend/internal/repository"
 	"hot-ai-backend/internal/service"
 	"hot-ai-backend/internal/utils/mailutil"
+	lpathHandler "hot-ai-backend/apps/services/learning-path-svc/handler"
 )
 
 var configFile = flag.String("f", "apps/gateway/etc/gateway.yaml", "the config file")
@@ -91,6 +92,10 @@ func main() {
 	userService := service.NewUserService(userRepo, favoriteRepo)
 	favoriteService := service.NewFavoriteService(favoriteRepo)
 
+	// 初始化学习路径服务
+	learningPathRepo := repository.NewLearningPathRepository()
+	learningPathService := service.NewLearningPathService(learningPathRepo)
+
 	// 配置邮件服务
 	if c.Mail.SMTPServer != "" {
 		authService.SetSMTPConfig(&mailutil.SMTPConfig{
@@ -106,7 +111,7 @@ func main() {
 	}
 
 	// 注册业务路由
-	registerRoutes(server, authMiddleware, authService, userService, favoriteService)
+	registerRoutes(server, authMiddleware, authService, userService, favoriteService, learningPathService)
 
 	fmt.Printf("Starting gateway at %s:%d...\n", c.Host, c.Port)
 
@@ -114,13 +119,16 @@ func main() {
 }
 
 // registerRoutes 注册所有业务路由
-func registerRoutes(server *rest.Server, authMiddleware *middleware.AuthMiddleware, authService *service.AuthService, userService *service.UserService, favoriteService *service.FavoriteService) {
+func registerRoutes(server *rest.Server, authMiddleware *middleware.AuthMiddleware, authService *service.AuthService, userService *service.UserService, favoriteService *service.FavoriteService, learningPathService *service.LearningPathService) {
 	// 创建处理器并注入依赖
 	authHandler := handler.NewAuthHandler()
 	authHandler.SetAuthService(authService)
 
 	// 创建用户处理器并注入依赖
 	userHandler := handler.NewUserHandler(userService, favoriteService)
+
+	// 创建学习路径处理器
+	learningPathHandler := lpathHandler.NewLearningPathHandler(learningPathService)
 
 	// ===== 认证路由 (公开) =====
 	server.AddRoute(rest.Route{
@@ -211,5 +219,91 @@ func registerRoutes(server *rest.Server, authMiddleware *middleware.AuthMiddlewa
 		Method:  http.MethodDelete,
 		Path:    "/api/user/favorites/{id}",
 		Handler: authMiddleware.Handle(userHandler.DeleteFavorite),
+	})
+
+	// ===== 学习路径路由 (公开) =====
+	// 获取学习路径列表
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/api/learning-paths",
+		Handler: learningPathHandler.GetLearningPaths,
+	})
+
+	// 获取推荐路径
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/api/learning-paths/featured",
+		Handler: learningPathHandler.GetFeaturedPaths,
+	})
+
+	// 获取难度等级信息
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/api/learning-paths/levels",
+		Handler: learningPathHandler.GetLevelInfo,
+	})
+
+	// 根据 ID 获取学习路径详情
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/api/learning-paths/id/{id}",
+		Handler: learningPathHandler.GetLearningPathByID,
+	})
+
+	// 根据 slug 获取学习路径详情
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/api/learning-paths/slug/{slug}",
+		Handler: learningPathHandler.GetLearningPathBySlug,
+	})
+
+	// 获取路径的所有章节
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/api/learning-paths/{path_id}/chapters",
+		Handler: learningPathHandler.GetPathChapters,
+	})
+
+	// 根据章节 ID 获取详情
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/api/chapters/{chapter_id}",
+		Handler: learningPathHandler.GetChapterByID,
+	})
+
+	// 根据路径 slug 和章节 slug 获取章节详情
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/api/learning-paths/{path_slug}/chapters/{chapter_slug}",
+		Handler: learningPathHandler.GetChapterBySlug,
+	})
+
+	// 获取路径学习仪表盘（综合统计）
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/api/learning-paths/dashboard",
+		Handler: learningPathHandler.GetPathDashboard,
+	})
+
+	// ===== 学习路径路由 (需要认证) =====
+	// 获取用户的学习进度
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/api/learning-paths/progress",
+		Handler: authMiddleware.Handle(learningPathHandler.GetPathProgress),
+	})
+
+	// 获取用户已完成的章节列表
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/api/learning-paths/completed-chapters",
+		Handler: authMiddleware.Handle(learningPathHandler.GetCompletedChapters),
+	})
+
+	// 保存学习进度
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPost,
+		Path:    "/api/learning-paths/save-progress",
+		Handler: authMiddleware.Handle(learningPathHandler.SaveProgress),
 	})
 }

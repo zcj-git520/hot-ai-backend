@@ -50,12 +50,6 @@ func main() {
 			os.Exit(1)
 		}
 
-		//// 自动迁移表结构
-		//if err := database.AutoMigrate(); err != nil {
-		//	fmt.Fprintf(os.Stderr, "auto migrate error: %v\n", err)
-		//	os.Exit(1)
-		//}
-
 		fmt.Println("Database initialized successfully")
 	} else {
 		fmt.Println("[警告] 未配置数据库")
@@ -68,24 +62,21 @@ func main() {
 
 	// 初始化仓储层
 	articleRepo := repository.NewArticleRepository()
-	professionRepo := repository.NewProfessionRepository()
 
 	// 初始化服务层
 	articleService := service.NewArticleService(articleRepo)
-	professionService := service.NewProfessionService(professionRepo)
 
 	// 注册路由
-	registerRoutes(server, articleService, professionService)
+	registerRoutes(server, articleService)
 
 	fmt.Printf("Starting content-svc at %s:%d...\n", c.Host, c.Port)
 	server.Start()
 }
 
 // registerRoutes 注册路由
-func registerRoutes(server *rest.Server, articleService *service.ArticleService, professionService *service.ProfessionService) {
+func registerRoutes(server *rest.Server, articleService *service.ArticleService) {
 	// 创建处理器
 	articleHandler := handler.NewArticleHandler(articleService)
-	professionHandler := handler.NewProfessionHandler(professionService)
 
 	// ===== 文章路由 =====
 	server.AddRoute(rest.Route{
@@ -104,30 +95,5 @@ func registerRoutes(server *rest.Server, articleService *service.ArticleService,
 		Method:  http.MethodGet,
 		Path:    "/api/articles/:id",
 		Handler: articleHandler.GetArticleByID,
-	})
-
-	// ===== 职业路由 =====
-	server.AddRoute(rest.Route{
-		Method:  http.MethodGet,
-		Path:    "/api/professions",
-		Handler: professionHandler.GetProfessions,
-	})
-
-	server.AddRoute(rest.Route{
-		Method:  http.MethodGet,
-		Path:    "/api/professions/risk-levels",
-		Handler: professionHandler.GetRiskLevels,
-	})
-
-	server.AddRoute(rest.Route{
-		Method:  http.MethodGet,
-		Path:    "/api/professions/search",
-		Handler: professionHandler.SearchProfessions,
-	})
-
-	server.AddRoute(rest.Route{
-		Method:  http.MethodGet,
-		Path:    "/api/professions/:slug",
-		Handler: professionHandler.GetProfessionBySlug,
 	})
 }
