@@ -32,6 +32,8 @@ tags:
     description: 文章资讯相关接口
   - name: 职业风险
     description: 职业风险分析相关接口
+  - name: 学习路径
+    description: 学习路径与进度管理相关接口
 
 paths:
   /auth/register:
@@ -1087,6 +1089,455 @@ paths:
                 message: 操作过于频繁，请稍后再试
                 data: null
 
+  # ===== 学习路径 API =====
+
+  # ---- 学习路径接口 ----
+
+  /learning-paths:
+    get:
+      tags:
+        - 学习路径
+      summary: 获取学习路径列表
+      description: 获取所有学习路径的列表，支持分页和筛选
+      operationId: getLearningPaths
+      parameters:
+        - name: page
+          in: query
+          description: 页码，默认 1
+          required: false
+          schema:
+            type: integer
+            default: 1
+          example: 1
+        - name: page_size
+          in: query
+          description: 每页数量，默认 12
+          required: false
+          schema:
+            type: integer
+            default: 12
+          example: 12
+        - name: difficulty
+          in: query
+          description: 难度筛选
+          required: false
+          schema:
+            type: string
+            enum: [beginner, intermediate, advanced]
+          example: beginner
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  list:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LearningPath'
+                  total:
+                    type: integer
+                    example: 50
+                  page:
+                    type: integer
+                    example: 1
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /learning-paths/featured:
+    get:
+      tags:
+        - 学习路径
+      summary: 获取推荐路径
+      description: 获取推荐的学习路径列表
+      operationId: getFeaturedPaths
+      parameters:
+        - name: limit
+          in: query
+          description: 返回数量，默认 4
+          required: false
+          schema:
+            type: integer
+            default: 4
+          example: 4
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LearningPath'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /learning-paths/levels:
+    get:
+      tags:
+        - 学习路径
+      summary: 获取难度等级信息
+      description: 获取所有难度等级的展示信息
+      operationId: getLevelInfo
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LevelInfo'
+
+  /learning-paths/id/{id}:
+    get:
+      tags:
+        - 学习路径
+      summary: 根据 ID 获取学习路径详情
+      description: 根据学习路径 ID 获取详细信息，包括所有章节
+      operationId: getLearningPathById
+      parameters:
+        - name: id
+          in: path
+          description: 学习路径 ID
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningPathDetail'
+        '404':
+          description: 学习路径不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /learning-paths/slug/{slug}:
+    get:
+      tags:
+        - 学习路径
+      summary: 根据 slug 获取学习路径详情
+      description: 根据学习路径 slug 获取详细信息，包括所有章节
+      operationId: getLearningPathBySlug
+      parameters:
+        - name: slug
+          in: path
+          description: 学习路径 slug
+          required: true
+          schema:
+            type: string
+          example: python-basics
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningPathDetail'
+        '404':
+          description: 学习路径不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  # ---- 章节接口 ----
+
+  /learning-paths/{path_id}/chapters:
+    get:
+      tags:
+        - 学习路径
+      summary: 获取路径的所有章节
+      description: 获取指定学习路径的所有章节列表
+      operationId: getChapters
+      parameters:
+        - name: path_id
+          in: path
+          description: 学习路径 ID
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PathChapter'
+        '404':
+          description: 学习路径不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /chapters/{chapter_id}:
+    get:
+      tags:
+        - 学习路径
+      summary: 根据章节 ID 获取详情
+      description: 根据章节 ID 获取章节详情
+      operationId: getChapterById
+      parameters:
+        - name: chapter_id
+          in: path
+          description: 章节 ID
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PathChapterDetail'
+        '404':
+          description: 章节不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /learning-paths/{path_slug}/chapters/{chapter_slug}:
+    get:
+      tags:
+        - 学习路径
+      summary: 根据路径 slug 和章节 slug 获取章节详情
+      description: 根据路径 slug 和章节 slug 获取章节详情，包含前一章和下一章信息
+      operationId: getChapterBySlug
+      parameters:
+        - name: path_slug
+          in: path
+          description: 学习路径 slug
+          required: true
+          schema:
+            type: string
+          example: python-basics
+        - name: chapter_slug
+          in: path
+          description: 章节 slug
+          required: true
+          schema:
+            type: string
+          example: basic-syntax
+        - name: path_id
+          in: query
+          description: 学习路径 ID（优先使用）
+          required: false
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChapterDetailWithNav'
+        '404':
+          description: 章节不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  # ---- 学习进度接口 ----
+
+  /learning-paths/dashboard:
+    get:
+      tags:
+        - 学习路径
+      summary: 获取路径学习仪表盘
+      description: 获取学习路径的综合统计信息，包括路径详情、章节列表和完成进度
+      operationId: getLearningDashboard
+      parameters:
+        - name: user_id
+          in: query
+          description: 用户 ID（用于获取个人进度）
+          required: false
+          schema:
+            type: string
+          example: user-123
+        - name: path_id
+          in: query
+          description: 学习路径 ID
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningDashboard'
+        '404':
+          description: 学习路径不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /learning-paths/progress:
+    get:
+      tags:
+        - 学习路径
+      summary: 获取用户的学习进度
+      description: 获取用户在指定学习路径上的学习进度
+      operationId: getLearningProgress
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: query
+          description: 用户 ID
+          required: false
+          schema:
+            type: string
+          example: user-123
+        - name: path_id
+          in: query
+          description: 学习路径 ID
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningProgress'
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+        '404':
+          description: 学习路径不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /learning-paths/completed-chapters:
+    get:
+      tags:
+        - 学习路径
+      summary: 获取用户已完成的章节列表
+      description: 获取用户在指定学习路径上已完成的章节 ID 列表
+      operationId: getCompletedChapters
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: query
+          description: 用户 ID
+          required: false
+          schema:
+            type: string
+          example: user-123
+        - name: path_id
+          in: query
+          description: 学习路径 ID
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  completed_chapters:
+                    type: array
+                    items:
+                      type: integer
+                    example: [1, 2, 3, 4, 5]
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /learning-paths/save-progress:
+    post:
+      tags:
+        - 学习路径
+      summary: 保存学习进度
+      description: 保存用户的学习进度
+      operationId: saveLearningProgress
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveProgressRequest'
+            example:
+              user_id: user-123
+              session_id: session-abc
+              path_id: 1
+              chapter_id: 5
+              status: completed
+              time_spent: 60
+              notes: 这一章讲得很好
+      responses:
+        '200':
+          description: 保存成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 进度已保存
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1999,6 +2450,405 @@ components:
           example: success
         data:
           $ref: '#/components/schemas/ProfessionDetail'
+
+    # ============ 学习路径相关模型 ============
+
+    LearningPath:
+      type: object
+      description: 学习路径
+      properties:
+        id:
+          type: integer
+          description: 学习路径 ID
+          example: 1
+        title:
+          type: string
+          description: 学习路径标题
+          example: Python 入门教程
+        slug:
+          type: string
+          description: URL 友好的标识
+          example: python-basics
+        icon:
+          type: string
+          description: Emoji 图标
+          example: "🐍"
+        description:
+          type: string
+          description: 学习路径描述
+          example: 从零开始学习 Python 编程
+        difficulty:
+          type: string
+          description: 难度等级
+          enum: [beginner, intermediate, advanced]
+          example: beginner
+        level_label:
+          type: string
+          description: 难度等级标签
+          example: 入门
+        estimated_days:
+          type: integer
+          description: 预计学习天数
+          example: 30
+        estimated_hours:
+          type: integer
+          description: 预计学习小时数
+          example: 60
+        chapter_count:
+          type: integer
+          description: 章节数量
+          example: 12
+        student_count:
+          type: integer
+          description: 学习人数
+          example: 1500
+        cover_image:
+          type: string
+          description: 封面图片 URL
+          example: https://example.com/cover.jpg
+        is_featured:
+          type: boolean
+          description: 是否推荐
+          example: true
+
+    LearningPathDetail:
+      type: object
+      description: 学习路径详情（包含章节）
+      allOf:
+        - $ref: '#/components/schemas/LearningPath'
+        - type: object
+          properties:
+            learning_goals:
+              type: array
+              items:
+                type: string
+              description: 学习目标
+              example: ["掌握 Python 基础语法", "理解面向对象编程"]
+            target_audience:
+              type: array
+              items:
+                type: string
+              description: 目标受众
+              example: ["编程初学者", "转行开发者"]
+            published_at:
+              type: string
+              format: date-time
+              description: 发布时间
+              example: "2026-01-01T00:00:00Z"
+            chapters:
+              type: array
+              items:
+                $ref: '#/components/schemas/PathChapter'
+              description: 章节列表
+
+    PathChapter:
+      type: object
+      description: 学习路径章节
+      properties:
+        id:
+          type: integer
+          description: 章节 ID
+          example: 1
+        path_id:
+          type: integer
+          description: 所属学习路径 ID
+          example: 1
+        title:
+          type: string
+          description: 章节标题
+          example: Python 基础语法
+        slug:
+          type: string
+          description: 章节 slug
+          example: basic-syntax
+        description:
+          type: string
+          description: 章节描述
+          example: 学习 Python 的基础语法
+        content_type:
+          type: string
+          description: 内容类型
+          enum: [article, video, exercise]
+          example: article
+        estimated_hours:
+          type: number
+          description: 预计学习小时数
+          example: 2
+        order_index:
+          type: integer
+          description: 排序索引
+          example: 1
+        is_free:
+          type: boolean
+          description: 是否免费
+          example: true
+
+    PathChapterDetail:
+      type: object
+      description: 章节详情（包含完整内容）
+      allOf:
+        - $ref: '#/components/schemas/PathChapter'
+        - type: object
+          properties:
+            content:
+              type: string
+              description: 章节内容
+              example: "文章内容..."
+            video_url:
+              type: string
+              description: 视频 URL
+              example: ""
+            external_links:
+              type: array
+              items:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  url:
+                    type: string
+              description: 外部链接列表
+              example: []
+
+    ChapterDetailWithNav:
+      type: object
+      description: 章节详情（包含前后章节导航）
+      properties:
+        chapter:
+          $ref: '#/components/schemas/PathChapterDetail'
+        prev:
+          type: object
+          nullable: true
+          description: 前一章信息
+          properties:
+            id:
+              type: integer
+              example: 1
+            path_id:
+              type: integer
+              example: 1
+            title:
+              type: string
+              example: "前置章节"
+            slug:
+              type: string
+              example: "prev-chapter"
+            description:
+              type: string
+              example: "前一章描述"
+            content_type:
+              type: string
+              example: article
+            estimated_hours:
+              type: number
+              example: 2
+            order_index:
+              type: integer
+              example: 1
+            is_free:
+              type: boolean
+              example: true
+        next:
+          type: object
+          nullable: true
+          description: 下一章信息
+          properties:
+            id:
+              type: integer
+              example: 2
+            path_id:
+              type: integer
+              example: 1
+            title:
+              type: string
+              example: "数据类型与变量"
+            slug:
+              type: string
+              example: "data-types"
+            description:
+              type: string
+              example: "学习 Python 的数据类型"
+            content_type:
+              type: string
+              example: article
+            estimated_hours:
+              type: number
+              example: 3
+            order_index:
+              type: integer
+              example: 2
+            is_free:
+              type: boolean
+              example: true
+
+    LevelInfo:
+      type: object
+      description: 难度等级信息
+      properties:
+        id:
+          type: string
+          description: 难度等级 ID
+          example: beginner
+        level:
+          type: string
+          description: 难度等级
+          enum: [beginner, intermediate, advanced]
+          example: beginner
+        name:
+          type: string
+          description: 等级名称
+          example: 入门
+        icon:
+          type: string
+          description: Emoji 图标
+          example: "🌱"
+        description:
+          type: string
+          description: 等级描述
+          example: 零基础友好，讲解基础概念和工具使用
+        color:
+          type: string
+          description: 显示颜色
+          example: "#4ade80"
+        min_hours:
+          type: integer
+          description: 最少学习小时数
+          example: 20
+        max_hours:
+          type: integer
+          description: 最多学习小时数
+          example: 40
+
+    LearningProgress:
+      type: object
+      description: 学习进度
+      properties:
+        id:
+          type: integer
+          description: 进度记录 ID
+          example: 1
+        user_id:
+          type: string
+          description: 用户 ID
+          example: user-123
+        path_id:
+          type: integer
+          description: 学习路径 ID
+          example: 1
+        chapter_id:
+          type: integer
+          description: 当前章节 ID
+          example: 5
+        status:
+          type: string
+          description: 进度状态
+          enum: [in_progress, completed]
+          example: in_progress
+        time_spent:
+          type: integer
+          description: 花费时间（分钟）
+          example: 180
+        notes:
+          type: string
+          description: 学习笔记
+          example: 学习笔记
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+          example: "2026-03-01T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: 更新时间
+          example: "2026-03-08T15:30:00Z"
+
+    SaveProgressRequest:
+      type: object
+      description: 保存学习进度请求
+      required:
+        - user_id
+        - path_id
+        - chapter_id
+        - status
+      properties:
+        user_id:
+          type: string
+          description: 用户 ID
+          example: user-123
+        session_id:
+          type: string
+          description: 会话 ID（未登录时使用）
+          example: session-abc
+        path_id:
+          type: integer
+          description: 学习路径 ID
+          example: 1
+        chapter_id:
+          type: integer
+          description: 章节 ID
+          example: 5
+        status:
+          type: string
+          description: 进度状态
+          enum: [in_progress, completed]
+          example: completed
+        time_spent:
+          type: integer
+          description: 花费时间（分钟）
+          example: 60
+        notes:
+          type: string
+          description: 学习笔记
+          example: 这一章讲得很好
+
+    LearningDashboard:
+      type: object
+      description: 学习路径仪表盘
+      properties:
+        path:
+          $ref: '#/components/schemas/LearningPath'
+        chapters:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 1
+              title:
+                type: string
+                example: "Python 基础语法"
+              slug:
+                type: string
+                example: "basic-syntax"
+              order_index:
+                type: integer
+                example: 1
+          description: 章节列表
+        completed_chapters:
+          type: array
+          items:
+            type: integer
+          description: 已完成章节 ID 列表
+          example: [1, 2]
+        progress:
+          type: object
+          description: 进度信息
+          properties:
+            total_chapters:
+              type: integer
+              description: 总章节数
+              example: 12
+            completed_count:
+              type: integer
+              description: 已完成章节数
+              example: 2
+            progress_percentage:
+              type: number
+              format: float
+              description: 完成百分比
+              example: 16.67
 
 # ============ 全局错误响应 ============
 x-error-codes:
