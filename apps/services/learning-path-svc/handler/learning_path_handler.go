@@ -171,7 +171,16 @@ func (h *LearningPathHandler) GetChapterByID(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, chapter)
+	// 获取前一章和下一章
+	prev, next, _ := h.learningPathService.GetPrevNextChapter(chapter.PathID, uint(chapterID))
+
+	result := map[string]interface{}{
+		"chapter": chapter,
+		"prev":    prev,
+		"next":    next,
+	}
+
+	httpx.OkJsonCtx(r.Context(), w, result)
 }
 
 // GetChapterBySlug 根据路径slug和章节slug获取章节详情
