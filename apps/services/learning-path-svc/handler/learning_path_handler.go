@@ -109,7 +109,28 @@ func (h *LearningPathHandler) GetLearningPathBySlug(w http.ResponseWriter, r *ht
 
 // GetPathChapters 获取路径的所有章节
 func (h *LearningPathHandler) GetPathChapters(w http.ResponseWriter, r *http.Request) {
-	pathIDStr := getPathValue(r, "path_id")
+	// 从 URL path 中提取 path_id
+	// URL 格式: /api/learning-paths/{path_id}/chapters
+	path := r.URL.Path
+	var pathIDStr string
+	
+	// 移除前缀 /api/learning-paths/
+	prefix := "/api/learning-paths/"
+	if len(path) > len(prefix) && path[:len(prefix)] == prefix {
+		remaining := path[len(prefix):] // "1/chapters"
+		// 找到第一个 / 的位置
+		for i := 0; i < len(remaining); i++ {
+			if remaining[i] == '/' {
+				pathIDStr = remaining[:i]
+				break
+			}
+		}
+		// 如果没有找到 /，说明整个 remaining 就是 path_id
+		if pathIDStr == "" {
+			pathIDStr = remaining
+		}
+	}
+	
 	if pathIDStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
 		return
