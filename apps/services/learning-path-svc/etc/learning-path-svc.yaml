@@ -1,6 +1,6 @@
 Name: learning-path-svc
 Host: 0.0.0.0
-Port: 8083
+Port: 8003
 DataSource:
   MySQL:
     DSN: root:shds@Admin123@tcp(192.168.50.109:13306)/hot_ai?charset=utf8mb4&parseTime=true&loc=Local
