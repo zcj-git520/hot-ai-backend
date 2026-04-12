@@ -86,3 +86,8 @@ func (s *ArticleService) GetArticleByID(idStr string) (*models.Article, error) {
 func (s *ArticleService) GetCategories() ([]models.Category, error) {
 	return s.articleRepo.GetCategories()
 }
+
+// GetArticleCount 获取文章总数
+func (s *ArticleService) GetArticleCount() (int64, error) {
+	return s.articleRepo.GetCount()
+}

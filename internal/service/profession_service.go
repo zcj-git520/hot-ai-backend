@@ -116,3 +116,8 @@ func (s *ProfessionService) GetRiskLevels() []models.RiskLevelInfo {
 func (s *ProfessionService) GetFeatured(limit int) ([]models.Profession, error) {
 	return s.professionRepo.GetFeatured(limit)
 }
+
+// GetProfessionCount 获取职业总数
+func (s *ProfessionService) GetProfessionCount() (int64, error) {
+	return s.professionRepo.GetProfessionCount()
+}

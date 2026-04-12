@@ -5,7 +5,7 @@ Port: 8001
 # 数据库配置
 DataSource:
   MySQL:
-    DSN: root:shds@Admin123@tcp(192.168.50.109:13306)/hot_ai?charset=utf8mb4&parseTime=true&loc=Local
+    DSN: root:zcj123456@tcp(127.0.0.1:3306)/hot_ai?charset=utf8mb4&parseTime=true&loc=Local
   MongoDB:
     URI: mongodb://localhost:27017
     Database: hot_ai_articles

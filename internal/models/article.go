@@ -62,7 +62,7 @@ type Article struct {
 	Author          string    `gorm:"column:author;type:varchar(50)" json:"author,omitempty"`
 	CategoryID      uint      `gorm:"column:category_id;not null;index:idx_category_id" json:"category_id"`
 	PublishedAt     time.Time `gorm:"column:published_at;not null;index:idx_published_at" json:"published_at"`
-	Status          int       `gorm:"column:status;default:1;index:idx_status" json:"status"`
+	Status          string    `gorm:"column:status;default:'published';index:idx_status" json:"status"`
 	CreatedAt       time.Time `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt       time.Time `gorm:"column:updated_at" json:"updated_at"`
 

@@ -13,8 +13,8 @@ func NewLearningPathRepository() *LearningPathRepository {
 	return &LearningPathRepository{}
 }
 
-// GetList 获取学习路径列表（支持分页、难度筛选）
-func (r *LearningPathRepository) GetList(page, pageSize int, difficulty string) ([]models.LearningPath, int64, error) {
+// GetList 获取学习路径列表（支持分页、难度筛选、搜索）
+func (r *LearningPathRepository) GetList(page, pageSize int, difficulty string, search string) ([]models.LearningPath, int64, error) {
 	var paths []models.LearningPath
 	var total int64
 
@@ -23,6 +23,11 @@ func (r *LearningPathRepository) GetList(page, pageSize int, difficulty string) 
 	// 难度筛选
 	if difficulty != "" && difficulty != "all" {
 		query = query.Where("difficulty = ?", difficulty)
+	}
+
+	// 搜索筛选
+	if search != "" {
+		query = query.Where("title LIKE ? OR description LIKE ?", "%"+search+"%", "%"+search+"%")
 	}
 
 	// 获取总数
@@ -268,6 +273,15 @@ func (r *LearningPathRepository) fillChapters(path *models.LearningPath) {
 		return
 	}
 	path.Chapters = chapters
+}
+
+// GetLearningPathCount 获取学习路径总数
+func (r *LearningPathRepository) GetLearningPathCount() (int64, error) {
+	var total int64
+	if err := database.GetDB().Model(&models.LearningPath{}).Where("status = ? AND is_active = ?", 1, 1).Count(&total).Error; err != nil {
+		return 0, err
+	}
+	return total, nil
 }
 
 // parseJSONList 解析 JSON 字符串为字符串数组

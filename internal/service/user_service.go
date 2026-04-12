@@ -313,3 +313,8 @@ func (s *FavoriteService) GetFavoriteList(ctx context.Context, userID string, pa
 		Stats:      stats,
 	}, nil
 }
+
+// GetUserCount 获取用户总数
+func (s *UserService) GetUserCount() (int64, error) {
+	return s.userRepo.GetUserCount()
+}

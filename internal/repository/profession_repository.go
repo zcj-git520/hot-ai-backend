@@ -222,3 +222,12 @@ func (r *ProfessionRepository) SearchByKeyword(keyword string, page, pageSize in
 
 	return professions, total, nil
 }
+
+// GetProfessionCount 获取职业总数
+func (r *ProfessionRepository) GetProfessionCount() (int64, error) {
+	var total int64
+	if err := database.GetDB().Model(&models.Profession{}).Where("status = ?", 1).Count(&total).Error; err != nil {
+		return 0, err
+	}
+	return total, nil
+}

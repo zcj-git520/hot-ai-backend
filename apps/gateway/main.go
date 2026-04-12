@@ -96,6 +96,23 @@ func main() {
 	learningPathRepo := repository.NewLearningPathRepository()
 	learningPathService := service.NewLearningPathService(learningPathRepo)
 
+	// 初始化文章服务
+	articleRepo := repository.NewArticleRepository()
+	articleService := service.NewArticleService(articleRepo)
+
+	// 初始化职业服务
+	professionRepo := repository.NewProfessionRepository()
+	professionService := service.NewProfessionService(professionRepo)
+
+	// 初始化工具服务
+	toolDB, err := database.GetDB().DB()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "get database connection error: %v\n", err)
+		os.Exit(1)
+	}
+	toolRepo := repository.NewToolRepository(toolDB)
+	toolService := service.NewToolService(toolRepo)
+
 	// 配置邮件服务
 	if c.Mail.SMTPServer != "" {
 		authService.SetSMTPConfig(&mailutil.SMTPConfig{
@@ -111,7 +128,7 @@ func main() {
 	}
 
 	// 注册业务路由
-	registerRoutes(server, authMiddleware, authService, userService, favoriteService, learningPathService)
+	registerRoutes(server, authMiddleware, authService, userService, favoriteService, learningPathService, articleService, professionService, toolService)
 
 	fmt.Printf("Starting gateway at %s:%d...\n", c.Host, c.Port)
 
@@ -119,7 +136,7 @@ func main() {
 }
 
 // registerRoutes 注册所有业务路由
-func registerRoutes(server *rest.Server, authMiddleware *middleware.AuthMiddleware, authService *service.AuthService, userService *service.UserService, favoriteService *service.FavoriteService, learningPathService *service.LearningPathService) {
+func registerRoutes(server *rest.Server, authMiddleware *middleware.AuthMiddleware, authService *service.AuthService, userService *service.UserService, favoriteService *service.FavoriteService, learningPathService *service.LearningPathService, articleService *service.ArticleService, professionService *service.ProfessionService, toolService *service.ToolService) {
 	// 创建处理器并注入依赖
 	authHandler := handler.NewAuthHandler()
 	authHandler.SetAuthService(authService)
@@ -129,6 +146,9 @@ func registerRoutes(server *rest.Server, authMiddleware *middleware.AuthMiddlewa
 
 	// 创建学习路径处理器
 	learningPathHandler := lpathHandler.NewLearningPathHandler(learningPathService)
+
+	// 创建首页处理器
+	homeHandler := handler.NewHomeHandler(articleService, professionService, learningPathService, userService, toolService)
 
 	// ===== 认证路由 (公开) =====
 	server.AddRoute(rest.Route{
@@ -219,6 +239,28 @@ func registerRoutes(server *rest.Server, authMiddleware *middleware.AuthMiddlewa
 		Method:  http.MethodDelete,
 		Path:    "/api/user/favorites/{id}",
 		Handler: authMiddleware.Handle(userHandler.DeleteFavorite),
+	})
+
+	// ===== 首页路由 (公开) =====
+	// 获取首页统计数据
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/api/home/stats",
+		Handler: homeHandler.GetHomeStats,
+	})
+
+	// 获取热门话题
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/api/home/topics",
+		Handler: homeHandler.GetHomeTopics,
+	})
+
+	// 获取热门排行
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/api/home/rankings",
+		Handler: homeHandler.GetHomeRankings,
 	})
 
 	// ===== 学习路径路由 (公开) =====

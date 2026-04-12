@@ -22,6 +22,7 @@ type GetLearningPathsRequest struct {
 	Page       int    `json:"page"`
 	PageSize   int    `json:"page_size"`
 	Difficulty string `json:"difficulty"`
+	Search     string `json:"search"`
 }
 
 // GetLearningPathsResponse 获取学习路径列表响应
@@ -33,7 +34,7 @@ type GetLearningPathsResponse struct {
 
 // GetLearningPaths 获取学习路径列表
 func (s *LearningPathService) GetLearningPaths(req *GetLearningPathsRequest) (*GetLearningPathsResponse, error) {
-	paths, total, err := s.learningPathRepo.GetList(req.Page, req.PageSize, req.Difficulty)
+	paths, total, err := s.learningPathRepo.GetList(req.Page, req.PageSize, req.Difficulty, req.Search)
 	if err != nil {
 		return nil, err
 	}
@@ -169,4 +170,9 @@ func (s *LearningPathService) SaveProgress(req *SaveProgressRequest) error {
 // IncrementStartCount 增加开始学习次数
 func (s *LearningPathService) IncrementStartCount(pathID uint) error {
 	return s.learningPathRepo.IncrementStartCount(pathID)
+}
+
+// GetLearningPathCount 获取学习路径总数
+func (s *LearningPathService) GetLearningPathCount() (int64, error) {
+	return s.learningPathRepo.GetLearningPathCount()
 }

@@ -1,0 +1,3190 @@
+openapi: 3.0.3
+info:
+  title: Hot AI Backend API
+  description: |
+    Hot AI 后端服务 API 接口文档
+    
+    ## 认证说明
+    除了注册和登录接口外，其他接口都需要在请求头中携带 JWT Token：
+    ```
+    Authorization: Bearer <your_access_token>
+    ```
+    
+    Token 有效期为 24 小时，过期后可以使用 Refresh Token 刷新。
+  version: 1.0.0
+  contact:
+    name: API Support
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: 本地开发环境
+  - url: https://api.hot-ai.com/api/v1
+    description: 生产环境
+
+tags:
+  - name: 认证
+    description: 用户认证相关接口
+  - name: 用户
+    description: 用户信息管理相关接口
+  - name: 文章
+    description: 文章资讯相关接口
+  - name: 职业风险
+    description: 职业风险分析相关接口
+  - name: 学习路径
+    description: 学习路径与进度管理相关接口
+  - name: 工具库
+    description: AI工具库相关接口
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - 认证
+      summary: 用户注册
+      description: |-
+        创建新用户账号
+        
+        ## 注册流程说明
+        1. 先调用 `/auth/send-registration-code` 发送邮箱验证码
+        2. 用户收到验证码后，调用此接口提交注册信息
+        3. 验证码有效期为 5 分钟，且只能使用一次
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              email: user@example.com
+              password: SecurePass123!
+              password_confirm: SecurePass123!
+              nickname: 用户名
+              verification_code: "123456"
+      responses:
+        '200':
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+              example:
+                user_id: user-123
+                message: 注册成功，请登录
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+              example:
+                code: 400
+                message: 邮箱格式不正确
+                data: null
+
+  /auth/login:
+    post:
+      tags:
+        - 认证
+      summary: 用户登录
+      description: 用户登录获取访问令牌
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: user@example.com
+              password: SecurePass123!
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              example:
+                access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                refresh_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                expires_in: 86400
+                user:
+                  id: user-123
+                  email: user@example.com
+                  nickname: 测试用户
+                  avatar: ""
+                  roles:
+                    - user
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+              example:
+                code: 400
+                message: 邮箱或密码格式错误
+                data: null
+        '401':
+          description: 认证失败（邮箱或密码错误）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+              example:
+                code: 401
+                message: 邮箱或密码错误
+                data: null
+
+  /auth/refresh:
+    post:
+      tags:
+        - 认证
+      summary: 刷新 Token
+      description: 使用 Refresh Token 获取新的 Access Token
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+            example:
+              refresh_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+      responses:
+        '200':
+          description: 刷新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenResponse'
+              example:
+                access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                expires_in: 86400
+        '401':
+          description: Refresh Token 无效或已过期
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+              example:
+                code: 401
+                message: Refresh Token 无效或已过期
+                data: null
+
+  /auth/logout:
+    post:
+      tags:
+        - 认证
+      summary: 用户登出
+      description: 退出登录，使当前 Token 失效
+      operationId: logoutUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 登出成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+              example:
+                code: 200
+                message: 登出成功
+                data:
+                  success: true
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+              example:
+                code: 401
+                message: 未授权访问
+                data: null
+
+  /user/profile:
+    get:
+      tags:
+        - 用户
+      summary: 获取用户资料
+      description: 获取当前登录用户的详细信息
+      operationId: getUserProfile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetail'
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+    put:
+      tags:
+        - 用户
+      summary: 更新用户资料
+      description: 更新当前登录用户的个人信息
+      operationId: updateUserProfile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdateRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /user/preferences:
+    put:
+      tags:
+        - 用户
+      summary: 更新用户偏好
+      description: 更新当前登录用户的偏好设置
+      operationId: updateUserPreferences
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPreferencesUpdateRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /user/change-password:
+    post:
+      tags:
+        - 用户
+      summary: 修改密码
+      description: 修改当前登录用户的密码
+      operationId: changePassword
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: 修改成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+        '401':
+          description: 未授权或原密码错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /user/favorites:
+    get:
+      tags:
+        - 用户
+      summary: 获取收藏列表
+      description: 获取当前登录用户的收藏列表
+      operationId: getUserFavorites
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          description: 收藏类型过滤（可选）
+          schema:
+            type: string
+            enum:
+              - article
+              - video
+              - course
+        - name: page
+          in: query
+          description: 页码（默认 1）
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          description: 每页数量（默认 20）
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FavoriteListResponse'
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+    post:
+      tags:
+        - 用户
+      summary: 添加收藏
+      description: 添加一个新的收藏
+      operationId: addFavorite
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFavoriteRequest'
+      responses:
+        '200':
+          description: 添加成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  favorite:
+                    $ref: '#/components/schemas/FavoriteItem'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /user/favorites/{id}:
+    delete:
+      tags:
+        - 用户
+      summary: 删除收藏
+      description: 删除指定的收藏
+      operationId: deleteFavorite
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 收藏 ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '404':
+          description: 收藏不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+# ============ 文章模块接口 ============
+  /articles/categories:
+    get:
+      tags:
+        - 文章
+      summary: 获取文章分类列表
+      description: 获取所有启用的文章分类,用于前端筛选按钮展示
+      operationId: getArticleCategories
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+        '500':
+          description: 服务器错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /articles:
+    get:
+      tags:
+        - 文章
+      summary: 获取文章列表
+      description: |-
+        分页获取文章列表,支持按分类筛选
+        
+        ## 分类代码说明
+        - `news`: AI动态
+        - `impact`: 职业影响
+        - `learn`: 学习资源
+        - `tool`: 工具产品
+      operationId: getArticles
+      parameters:
+        - name: page
+          in: query
+          description: 页码(从1开始)
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: page_size
+          in: query
+          description: 每页数量
+          required: false
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+        - name: category
+          in: query
+          description: 分类代码(news/impact/learn/tool),不传则返回全部
+          required: false
+          schema:
+            type: string
+            enum: [news, impact, learn, tool]
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      articles:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Article'
+                      total:
+                        type: integer
+                        description: 总记录数
+                        example: 100
+                      page:
+                        type: integer
+                        description: 当前页码
+                        example: 1
+                      page_size:
+                        type: integer
+                        description: 每页数量
+                        example: 10
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+        '500':
+          description: 服务器错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /articles/{id}:
+    get:
+      tags:
+        - 文章
+      summary: 获取文章详情
+      description: 根据文章ID获取详细信息,会自动增加阅读量
+      operationId: getArticleById
+      parameters:
+        - name: id
+          in: path
+          description: 文章ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/ArticleDetail'
+        '404':
+          description: 文章不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+        '500':
+          description: 服务器错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  # ============ 职业风险模块接口 ============
+  /professions/categories:
+    get:
+      tags:
+        - 职业风险
+      summary: 获取职业分类列表
+      description: 获取所有职业分类信息
+      operationId: getProfessionCategories
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProfessionCategory'
+              example:
+                - id: 1
+                  name: 技术类
+                  description: 技术开发、运维等相关职业
+                  sort_order: 1
+                  status: 1
+
+  /professions/risk-levels:
+    get:
+      tags:
+        - 职业风险
+      summary: 获取风险等级信息
+      description: 获取所有风险等级及其说明
+      operationId: getRiskLevels
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RiskLevelInfo'
+              example:
+                - id: extreme
+                  level: extreme
+                  name: 极高风险
+                  icon: 🔴
+                  description: 该职业面临极高的自动化替代风险
+                  color: '#EF4444'
+                  min_score: 80
+                  max_score: 100
+
+  /professions:
+    get:
+      tags:
+        - 职业风险
+      summary: 获取职业列表
+      description: 获取职业列表，支持分页、分类筛选、风险等级筛选和关键词搜索
+      operationId: getProfessions
+      parameters:
+        - name: page
+          in: query
+          description: 页码(从1开始)
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          example: 1
+        - name: page_size
+          in: query
+          description: 每页数量(1-100)
+          required: false
+          schema:
+            type: integer
+            default: 12
+            minimum: 1
+            maximum: 100
+          example: 12
+        - name: category_id
+          in: query
+          description: 分类ID
+          required: false
+          schema:
+            type: integer
+          example: 1
+        - name: risk_level
+          in: query
+          description: 风险等级(extreme/high/medium/low)
+          required: false
+          schema:
+            type: string
+            enum: [extreme, high, medium, low]
+          example: high
+        - name: keyword
+          in: query
+          description: 关键词搜索
+          required: false
+          schema:
+            type: string
+          example: 程序员
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfessionListResponse'
+
+  /professions/search:
+    get:
+      tags:
+        - 职业风险
+      summary: 搜索职业
+      description: 根据关键词搜索职业
+      operationId: searchProfessions
+      parameters:
+        - name: q
+          in: query
+          description: 搜索关键词
+          required: true
+          schema:
+            type: string
+          example: 程序员
+        - name: page
+          in: query
+          description: 页码
+          required: false
+          schema:
+            type: integer
+            default: 1
+          example: 1
+        - name: page_size
+          in: query
+          description: 每页数量
+          required: false
+          schema:
+            type: integer
+            default: 12
+          example: 12
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfessionListResponse'
+        '400':
+          description: 缺少搜索关键词
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /professions/{slug}:
+    get:
+      tags:
+        - 职业风险
+      summary: 获取职业详情
+      description: 根据 slug 获取职业详细信息，包括影响分析、转型建议和市场数据
+      operationId: getProfessionBySlug
+      parameters:
+        - name: slug
+          in: path
+          description: 职业唯一标识(slug)
+          required: true
+          schema:
+            type: string
+          example: software-engineer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfessionDetailResponse'
+        '404':
+          description: 职业不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - 认证
+      summary: 忘记密码
+      description: |-
+        发送重置密码邮件到指定邮箱
+        
+        ## 安全说明
+        - 为了安全考虑，无论邮箱是否注册，都会返回成功提示
+        - 防止攻击者通过此接口枚举已注册用户
+        
+        ## 限流规则
+        - 同一邮箱 1 小时内最多发送 1 次
+        
+        ## 重置链接说明
+        - 重置链接包含一次性 token
+        - token 有效期为 1 小时
+        - 点击重置链接后，token 立即失效
+      operationId: forgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: 需要重置密码的邮箱地址
+                  example: user@example.com
+            example:
+              email: user@example.com
+      responses:
+        '200':
+          description: 重置邮件发送成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 如果该邮箱已注册，重置密码邮件将发送至您的邮箱
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+              example:
+                code: 400
+                message: 邮箱格式不正确
+                data: null
+        '429':
+          description: 操作过于频繁
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+              example:
+                code: 429
+                message: 操作过于频繁，请 1 小时后再试
+                data: null
+
+  /auth/reset-password:
+    post:
+      tags:
+        - 认证
+      summary: 重置密码
+      description: |-
+        使用重置 token 设置新密码
+        
+        ## 密码要求
+        - 长度：8-20 位
+        - 必须包含大写字母、小写字母、数字、特殊字符
+        
+        ## 注意事项
+        - 重置 token 只能使用一次
+        - token 有效期为 1 小时
+      operationId: resetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - password
+                - password_confirm
+              properties:
+                token:
+                  type: string
+                  description: 重置密码 token（从邮件链接中获取）
+                  example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                password:
+                  type: string
+                  format: password
+                  description: 新密码
+                  minLength: 8
+                  maxLength: 20
+                  example: NewSecurePass123!
+                password_confirm:
+                  type: string
+                  format: password
+                  description: 确认密码
+                  example: NewSecurePass123!
+            example:
+              token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+              password: NewSecurePass123!
+              password_confirm: NewSecurePass123!
+      responses:
+        '200':
+          description: 密码重置成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 密码重置成功，请登录
+        '400':
+          description: 请求参数错误或密码强度不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+              example:
+                code: 400
+                message: 两次输入的密码不一致
+                data: null
+        '404':
+          description: 无效的或过期的重置 token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+              example:
+                code: 404
+                message: 重置链接已过期或无效
+                data: null
+
+  /auth/send-registration-code:
+    post:
+      tags:
+        - 认证
+      summary: 发送注册验证码
+      description: |-
+        向指定邮箱发送注册验证码，用于验证邮箱所有权
+        
+        ## 限流规则
+        - 同一邮箱 1 分钟内最多发送 1 次
+        - 同一邮箱 1 小时内最多发送 5 次
+        
+        ## 验证码说明
+        - 验证码为 6 位数字
+        - 有效期 5 分钟
+        - 一次性使用，验证后自动失效
+      operationId: sendRegistrationCode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: 需要验证的邮箱地址
+                  example: user@example.com
+            example:
+              email: user@example.com
+      responses:
+        '200':
+          description: 验证码发送成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 验证码已发送，请检查邮箱
+                  email:
+                    type: string
+                    example: user@example.com
+                  expires_in:
+                    type: integer
+                    description: 验证码有效期（秒）
+                    example: 300
+        '400':
+          description: 请求参数错误或邮箱已注册
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+              example:
+                code: 400
+                message: 该邮箱已注册
+                data: null
+        '429':
+          description: 操作过于频繁
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+              example:
+                code: 429
+                message: 操作过于频繁，请稍后再试
+                data: null
+
+  /auth/send-verification-email:
+    post:
+      tags:
+        - 认证
+      summary: 发送验证邮件
+      description: 向指定邮箱发送验证邮件，用于验证邮箱所有权
+      operationId: sendVerificationEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: 需要验证的邮箱地址
+                  example: user@example.com
+            example:
+              email: user@example.com
+      responses:
+        '200':
+          description: 邮件发送成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 验证邮件已发送，请检查邮箱
+                  email:
+                    type: string
+                    example: user@example.com
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+              example:
+                code: 400
+                message: 邮箱格式不正确
+                data: null
+        '429':
+          description: 请求过于频繁（限流）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+              example:
+                code: 429
+                message: 操作过于频繁，请稍后再试
+                data: null
+
+  # ===== 学习路径 API =====
+
+  # ---- 学习路径接口 ----
+
+  /learning-paths:
+    get:
+      tags:
+        - 学习路径
+      summary: 获取学习路径列表
+      description: 获取所有学习路径的列表，支持分页和筛选
+      operationId: getLearningPaths
+      parameters:
+        - name: page
+          in: query
+          description: 页码，默认 1
+          required: false
+          schema:
+            type: integer
+            default: 1
+          example: 1
+        - name: page_size
+          in: query
+          description: 每页数量，默认 12
+          required: false
+          schema:
+            type: integer
+            default: 12
+          example: 12
+        - name: difficulty
+          in: query
+          description: 难度筛选
+          required: false
+          schema:
+            type: string
+            enum: [beginner, intermediate, advanced]
+          example: beginner
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  list:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LearningPath'
+                  total:
+                    type: integer
+                    example: 50
+                  page:
+                    type: integer
+                    example: 1
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /learning-paths/featured:
+    get:
+      tags:
+        - 学习路径
+      summary: 获取推荐路径
+      description: 获取推荐的学习路径列表
+      operationId: getFeaturedPaths
+      parameters:
+        - name: limit
+          in: query
+          description: 返回数量，默认 4
+          required: false
+          schema:
+            type: integer
+            default: 4
+          example: 4
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LearningPath'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /learning-paths/levels:
+    get:
+      tags:
+        - 学习路径
+      summary: 获取难度等级信息
+      description: 获取所有难度等级的展示信息
+      operationId: getLevelInfo
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LevelInfo'
+
+  /learning-paths/id/{id}:
+    get:
+      tags:
+        - 学习路径
+      summary: 根据 ID 获取学习路径详情
+      description: 根据学习路径 ID 获取详细信息，包括所有章节
+      operationId: getLearningPathById
+      parameters:
+        - name: id
+          in: path
+          description: 学习路径 ID
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningPathDetail'
+        '404':
+          description: 学习路径不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /learning-paths/slug/{slug}:
+    get:
+      tags:
+        - 学习路径
+      summary: 根据 slug 获取学习路径详情
+      description: 根据学习路径 slug 获取详细信息，包括所有章节
+      operationId: getLearningPathBySlug
+      parameters:
+        - name: slug
+          in: path
+          description: 学习路径 slug
+          required: true
+          schema:
+            type: string
+          example: python-basics
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningPathDetail'
+        '404':
+          description: 学习路径不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  # ---- 章节接口 ----
+
+  /learning-paths/{path_id}/chapters:
+    get:
+      tags:
+        - 学习路径
+      summary: 获取路径的所有章节
+      description: 获取指定学习路径的所有章节列表
+      operationId: getChapters
+      parameters:
+        - name: path_id
+          in: path
+          description: 学习路径 ID
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PathChapter'
+        '404':
+          description: 学习路径不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /chapters/{chapter_id}:
+    get:
+      tags:
+        - 学习路径
+      summary: 根据章节 ID 获取详情
+      description: 根据章节 ID 获取章节详情
+      operationId: getChapterById
+      parameters:
+        - name: chapter_id
+          in: path
+          description: 章节 ID
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PathChapterDetail'
+        '404':
+          description: 章节不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /learning-paths/{path_slug}/chapters/{chapter_slug}:
+    get:
+      tags:
+        - 学习路径
+      summary: 根据路径 slug 和章节 slug 获取章节详情
+      description: 根据路径 slug 和章节 slug 获取章节详情，包含前一章和下一章信息
+      operationId: getChapterBySlug
+      parameters:
+        - name: path_slug
+          in: path
+          description: 学习路径 slug
+          required: true
+          schema:
+            type: string
+          example: python-basics
+        - name: chapter_slug
+          in: path
+          description: 章节 slug
+          required: true
+          schema:
+            type: string
+          example: basic-syntax
+        - name: path_id
+          in: query
+          description: 学习路径 ID（优先使用）
+          required: false
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChapterDetailWithNav'
+        '404':
+          description: 章节不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  # ---- 学习进度接口 ----
+
+  /learning-paths/dashboard:
+    get:
+      tags:
+        - 学习路径
+      summary: 获取路径学习仪表盘
+      description: 获取学习路径的综合统计信息，包括路径详情、章节列表和完成进度
+      operationId: getLearningDashboard
+      parameters:
+        - name: user_id
+          in: query
+          description: 用户 ID（用于获取个人进度）
+          required: false
+          schema:
+            type: string
+          example: user-123
+        - name: path_id
+          in: query
+          description: 学习路径 ID
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningDashboard'
+        '404':
+          description: 学习路径不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /learning-paths/progress:
+    get:
+      tags:
+        - 学习路径
+      summary: 获取用户的学习进度
+      description: 获取用户在指定学习路径上的学习进度
+      operationId: getLearningProgress
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: query
+          description: 用户 ID
+          required: false
+          schema:
+            type: string
+          example: user-123
+        - name: path_id
+          in: query
+          description: 学习路径 ID
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningProgress'
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+        '404':
+          description: 学习路径不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /learning-paths/completed-chapters:
+    get:
+      tags:
+        - 学习路径
+      summary: 获取用户已完成的章节列表
+      description: 获取用户在指定学习路径上已完成的章节 ID 列表
+      operationId: getCompletedChapters
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: query
+          description: 用户 ID
+          required: false
+          schema:
+            type: string
+          example: user-123
+        - name: path_id
+          in: query
+          description: 学习路径 ID
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  completed_chapters:
+                    type: array
+                    items:
+                      type: integer
+                    example: [1, 2, 3, 4, 5]
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /learning-paths/save-progress:
+    post:
+      tags:
+        - 学习路径
+      summary: 保存学习进度
+      description: 保存用户的学习进度
+      operationId: saveLearningProgress
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveProgressRequest'
+            example:
+              user_id: user-123
+              session_id: session-abc
+              path_id: 1
+              chapter_id: 5
+              status: completed
+              time_spent: 60
+              notes: 这一章讲得很好
+      responses:
+        '200':
+          description: 保存成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 进度已保存
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+# ============ 工具库接口 ============
+  /api/tools:
+    get:
+      tags:
+        - 工具库
+      summary: 获取工具列表
+      description: 获取工具列表，支持分页和筛选
+      operationId: getTools
+      parameters:
+        - name: page
+          in: query
+          description: 页码，默认 1
+          required: false
+          schema:
+            type: integer
+            example: 1
+        - name: page_size
+          in: query
+          description: 每页数量，默认 20
+          required: false
+          schema:
+            type: integer
+            example: 20
+        - name: category_id
+          in: query
+          description: 类别 ID
+          required: false
+          schema:
+            type: integer
+            example: 1
+        - name: difficulty
+          in: query
+          description: 难度等级：beginner/intermediate/advanced
+          required: false
+          schema:
+            type: string
+            example: beginner
+        - name: keyword
+          in: query
+          description: 搜索关键词
+          required: false
+          schema:
+            type: string
+            example: chat
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolsResponse'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /api/tools/categories:
+    get:
+      tags:
+        - 工具库
+      summary: 获取工具类别列表
+      description: 获取所有工具类别
+      operationId: getToolCategories
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolCategoriesResponse'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /api/tools/{slug}:
+    get:
+      tags:
+        - 工具库
+      summary: 获取工具详情（通过 slug）
+      description: 根据 slug 获取工具详细信息
+      operationId: getToolBySlug
+      parameters:
+        - name: slug
+          in: path
+          description: 工具的 URL 友好标识
+          required: true
+          schema:
+            type: string
+            example: chatgpt
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolResponse'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+        '404':
+          description: 工具不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+  /api/tools/id/{id}:
+    get:
+      tags:
+        - 工具库
+      summary: 获取工具详情（通过 ID）
+      description: 根据 ID 获取工具详细信息
+      operationId: getToolById
+      parameters:
+        - name: id
+          in: path
+          description: 工具 ID
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolResponse'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+        '404':
+          description: 工具不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Bearer Token 认证
+
+  schemas:
+    # ============ 请求模型 ============
+    RegisterRequest:
+      type: object
+      description: 用户注册请求
+      required:
+        - email
+        - password
+        - nickname
+      properties:
+        email:
+          type: string
+          format: email
+          description: 邮箱地址
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          description: 密码
+          minLength: 8
+          maxLength: 32
+          example: SecurePass123!
+        nickname:
+          type: string
+          description: 用户昵称
+          minLength: 2
+          maxLength: 20
+          example: 用户名
+
+    LoginRequest:
+      type: object
+      description: 用户登录请求
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: 邮箱地址
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          description: 密码
+          example: SecurePass123!
+
+    RefreshTokenRequest:
+      type: object
+      description: 刷新 Token 请求
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          type: string
+          description: Refresh Token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    # ============ 响应模型 ============
+    RegisterResponse:
+      type: object
+      description: 注册响应
+      properties:
+        user_id:
+          type: string
+          description: 用户 ID
+          example: user-123
+        message:
+          type: string
+          description: 消息
+          example: 注册成功，请登录
+
+    LoginResponse:
+      type: object
+      description: 登录响应
+      properties:
+        access_token:
+          type: string
+          description: Access Token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refresh_token:
+          type: string
+          description: Refresh Token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        expires_in:
+          type: integer
+          description: 过期时间（秒）
+          example: 86400
+        user:
+          $ref: '#/components/schemas/UserInfo'
+
+    RefreshTokenResponse:
+      type: object
+      description: 刷新 Token 响应
+      properties:
+        access_token:
+          type: string
+          description: Access Token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        expires_in:
+          type: integer
+          description: 过期时间（秒）
+          example: 86400
+
+    CommonResponse:
+      type: object
+      description: 通用响应结构
+      properties:
+        code:
+          type: integer
+          description: 状态码
+          example: 200
+        message:
+          type: string
+          description: 消息
+          example: 操作成功
+        data:
+          type: object
+          description: 数据
+          nullable: true
+
+    UserInfo:
+      type: object
+      description: 用户基本信息
+      properties:
+        id:
+          type: string
+          description: 用户 ID
+          example: user-123
+        email:
+          type: string
+          format: email
+          description: 邮箱
+          example: user@example.com
+        nickname:
+          type: string
+          description: 昵称
+          example: 测试用户
+        avatar:
+          type: string
+          description: 头像 URL
+          example: ""
+        roles:
+          type: array
+          description: 角色列表
+          items:
+            type: string
+          example:
+            - user
+
+    UserDetail:
+      type: object
+      description: 用户详细信息
+      properties:
+        id:
+          type: string
+          description: 用户 ID
+          example: user-123
+        email:
+          type: string
+          format: email
+          description: 邮箱
+          example: user@example.com
+        nickname:
+          type: string
+          description: 昵称
+          example: 测试用户
+        avatar:
+          type: string
+          description: 头像 URL
+          example: https://example.com/avatar.jpg
+        bio:
+          type: string
+          description: 个人简介
+          example: 这是一个开发者
+        status:
+          type: string
+          description: 账号状态
+          enum:
+            - active
+            - inactive
+            - banned
+          example: active
+        email_verified:
+          type: boolean
+          description: 邮箱是否已验证
+          example: true
+        preferences:
+          $ref: '#/components/schemas/UserPreferences'
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+          example: "2024-01-01T00:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: 更新时间
+          example: "2024-01-02T00:00:00Z"
+
+    UserProfileUpdateRequest:
+      type: object
+      description: 更新用户资料请求
+      properties:
+        nickname:
+          type: string
+          description: 昵称
+          minLength: 2
+          maxLength: 20
+          example: 新昵称
+        avatar:
+          type: string
+          description: 头像 URL
+          example: https://example.com/avatar.jpg
+        bio:
+          type: string
+          description: 个人简介
+          maxLength: 500
+          example: 这是一个开发者
+
+    UserPreferencesUpdateRequest:
+      type: object
+      description: 更新用户偏好请求
+      properties:
+        interested_categories:
+          type: array
+          description: 感兴趣的分类
+          items:
+            type: string
+          example:
+            - AI
+            - 技术
+        followed_professions:
+          type: array
+          description: 关注的行业
+          items:
+            type: string
+          example:
+            - 互联网
+            - 教育
+        email_notifications:
+          $ref: '#/components/schemas/EmailNotificationSettings'
+        theme:
+          type: string
+          description: 主题
+          enum:
+            - light
+            - dark
+          example: light
+        language:
+          type: string
+          description: 语言
+          example: zh-CN
+
+    UserPreferences:
+      type: object
+      description: 用户偏好设置
+      properties:
+        interested_categories:
+          type: array
+          description: 感兴趣的分类
+          items:
+            type: string
+          example:
+            - AI
+            - 技术
+        followed_professions:
+          type: array
+          description: 关注的行业
+          items:
+            type: string
+          example:
+            - 互联网
+            - 教育
+        email_notifications:
+          $ref: '#/components/schemas/EmailNotificationSettings'
+        theme:
+          type: string
+          description: 主题
+          enum:
+            - light
+            - dark
+          example: light
+        language:
+          type: string
+          description: 语言
+          example: zh-CN
+
+    EmailNotificationSettings:
+      type: object
+      description: 邮件通知设置
+      properties:
+        system_update:
+          type: boolean
+          description: 系统更新通知
+          example: true
+        new_content:
+          type: boolean
+          description: 新内容通知
+          example: true
+        weekly_digest:
+          type: boolean
+          description: 周报
+          example: true
+
+    ChangePasswordRequest:
+      type: object
+      description: 修改密码请求
+      required:
+        - old_password
+        - new_password
+      properties:
+        old_password:
+          type: string
+          format: password
+          description: 原密码
+          example: OldSecurePass123!
+        new_password:
+          type: string
+          format: password
+          description: 新密码
+          minLength: 8
+          maxLength: 20
+          example: NewSecurePass123!
+
+    FavoriteItem:
+      type: object
+      description: 收藏项
+      properties:
+        id:
+          type: string
+          description: 收藏 ID
+          example: fav-123
+        user_id:
+          type: string
+          description: 用户 ID
+          example: user-123
+        type:
+          type: string
+          description: 收藏类型
+          enum:
+            - article
+            - video
+            - course
+          example: article
+        target_id:
+          type: string
+          description: 目标资源 ID
+          example: article-456
+        target_title:
+          type: string
+          description: 目标资源标题
+          example: AI 发展趋势报告
+        target_summary:
+          type: string
+          description: 目标资源摘要
+          example: 这是一篇关于 AI 发展的文章
+        tags:
+          type: array
+          description: 标签列表
+          items:
+            type: string
+          example:
+            - AI
+            - 技术
+        note:
+          type: string
+          description: 备注
+          example: 很重要的文章
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+          example: "2024-01-01T00:00:00Z"
+
+    FavoriteListResponse:
+      type: object
+      description: 收藏列表响应
+      properties:
+        total:
+          type: integer
+          description: 总数
+          example: 100
+        page:
+          type: integer
+          description: 当前页码
+          example: 1
+        page_size:
+          type: integer
+          description: 每页数量
+          example: 20
+        favorites:
+          type: array
+          description: 收藏列表
+          items:
+            $ref: '#/components/schemas/FavoriteItem'
+
+    CreateFavoriteRequest:
+      type: object
+      description: 创建收藏请求
+      required:
+        - type
+        - target_id
+        - target_title
+      properties:
+        type:
+          type: string
+          description: 收藏类型
+          enum:
+            - article
+            - video
+            - course
+          example: article
+        target_id:
+          type: string
+          description: 目标资源 ID
+          example: article-123
+        target_title:
+          type: string
+          description: 目标资源标题
+          example: AI 发展趋势报告
+        target_summary:
+          type: string
+          description: 目标资源摘要
+          example: 这是一篇关于 AI 发展的文章
+        tags:
+          type: array
+          description: 标签列表
+          items:
+            type: string
+          example:
+            - AI
+            - 技术
+        note:
+          type: string
+          description: 备注
+          example: 很重要的文章
+
+    # ============ 文章模块数据模型 ============
+    Category:
+      type: object
+      description: 文章分类
+      properties:
+        id:
+          type: integer
+          description: 分类ID
+          example: 1
+        name:
+          type: string
+          description: 分类名称
+          example: 动态
+        code:
+          type: string
+          description: 分类代码(用于API筛选)
+          example: news
+        color:
+          type: string
+          description: 颜色值(十六进制)
+          example: '#3B82F6'
+        icon:
+          type: string
+          description: 图标名称
+          example: news
+        sort_order:
+          type: integer
+          description: 排序顺序
+          example: 1
+        status:
+          type: integer
+          description: 状态(0-禁用, 1-启用)
+          example: 1
+
+    Tag:
+      type: object
+      description: 标签
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 标签ID
+          example: 1
+        name:
+          type: string
+          description: 标签名称
+          example: GPT-5
+        type:
+          type: integer
+          format: int64
+          description: 标签类型
+          example: 1
+
+    Article:
+      type: object
+      description: 文章简要信息(列表项)
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 文章ID
+          example: 1
+        title:
+          type: string
+          description: 文章标题
+          example: GPT-5 发布：AI 能力再次飞跃，这些职业将受到影响
+        summary:
+          type: string
+          description: AI生成摘要
+          example: OpenAI 今日发布 GPT-5，在多个基准测试中取得突破性进展...
+        category_id:
+          type: integer
+          description: 分类ID
+          example: 1
+        category_name:
+          type: string
+          description: 分类名称
+          example: 动态
+        source_id:
+          type: integer
+          format: int64
+          description: 来源ID
+          example: 1
+        source_name:
+          type: string
+          description: 来源名称
+          example: 机器之心
+        author:
+          type: string
+          description: 作者
+          example: AI观察
+        published_at:
+          type: string
+          format: date-time
+          description: 发布时间
+          example: '2026-03-30T10:00:00Z'
+        view_count:
+          type: integer
+          format: int64
+          description: 阅读量
+          example: 1234
+        comment_count:
+          type: integer
+          format: int64
+          description: 评论数
+          example: 23
+        tags:
+          type: array
+          description: 标签列表
+          items:
+            $ref: '#/components/schemas/Tag'
+
+    ArticleDetail:
+      type: object
+      description: 文章详细信息
+      allOf:
+        - $ref: '#/components/schemas/Article'
+        - type: object
+          properties:
+            content_mongo_id:
+              type: string
+              description: MongoDB正文ID(从MongoDB获取正文内容)
+              example: 507f1f77bcf86cd799439011
+            status:
+              type: integer
+              description: 状态(0-待审核, 1-已发布, 2-已删除)
+              example: 1
+            created_at:
+              type: string
+              format: date-time
+              description: 创建时间
+              example: '2026-03-30T10:00:00Z'
+            updated_at:
+              type: string
+              format: date-time
+              description: 更新时间
+              example: '2026-03-30T10:00:00Z'
+
+    # ============ 职业风险模块数据模型 ============
+    ProfessionCategory:
+      type: object
+      description: 职业分类
+      properties:
+        id:
+          type: integer
+          description: 分类ID
+          example: 1
+        name:
+          type: string
+          description: 分类名称
+          example: 技术类
+        description:
+          type: string
+          description: 分类描述
+          example: 技术开发、运维等相关职业
+        sort_order:
+          type: integer
+          description: 排序顺序
+          example: 1
+        status:
+          type: integer
+          description: 状态(0-待审核, 1-已发布, 2-已删除)
+          example: 1
+
+    RiskLevelInfo:
+      type: object
+      description: 风险等级信息
+      properties:
+        id:
+          type: string
+          description: 等级ID
+          example: extreme
+        level:
+          type: string
+          description: 等级代码
+          enum: [extreme, high, medium, low]
+          example: extreme
+        name:
+          type: string
+          description: 等级名称
+          example: 极高风险
+        icon:
+          type: string
+          description: 图标
+          example: 🔴
+        description:
+          type: string
+          description: 等级描述
+          example: 该职业面临极高的自动化替代风险
+        color:
+          type: string
+          description: 颜色值(十六进制)
+          example: '#EF4444'
+        min_score:
+          type: integer
+          description: 最小分数
+          example: 80
+        max_score:
+          type: integer
+          description: 最大分数
+          example: 100
+
+    ProfessionBrief:
+      type: object
+      description: 职业简要信息(列表项)
+      properties:
+        id:
+          type: integer
+          description: 职业ID
+          example: 1
+        name:
+          type: string
+          description: 职业名称
+          example: 软件工程师
+        slug:
+          type: string
+          description: 职业唯一标识
+          example: software-engineer
+        icon:
+          type: string
+          description: 图标
+          example: 💻
+        category_id:
+          type: integer
+          description: 分类ID
+          example: 1
+        category_name:
+          type: string
+          description: 分类名称
+          example: 技术类
+        description:
+          type: string
+          description: 职业描述
+          example: 从事软件开发、维护的专业技术人员
+        risk_level:
+          type: string
+          description: 风险等级
+          enum: [extreme, high, medium, low]
+          example: medium
+        risk_score:
+          type: integer
+          description: 风险分数
+          example: 55
+        automation_rate:
+          type: integer
+          description: 自动化率(%)
+          example: 50
+        view_count:
+          type: integer
+          description: 浏览量
+          example: 1234
+
+    ProfessionImpactAnalysis:
+      type: object
+      description: 职业影响分析
+      properties:
+        affected_tasks:
+          type: array
+          description: 受影响的任务列表
+          items:
+            type: string
+          example: ["代码生成", "单元测试编写", "Bug修复"]
+        safe_tasks:
+          type: array
+          description: 安全的任务列表
+          items:
+            type: string
+          example: ["系统架构设计", "需求分析", "技术选型"]
+        safe_skills:
+          type: array
+          description: 安全技能列表
+          items:
+            type: string
+          example: ["系统设计能力", "业务理解能力", "团队协作能力"]
+        impact_timeline:
+          type: object
+          description: 影响时间线
+          properties:
+            short_term:
+              type: string
+              description: 短期影响
+              example: AI辅助编程工具将提高开发效率
+            mid_term:
+              type: string
+              description: 中期影响
+              example: 部分重复性编码工作将被自动化
+            long_term:
+              type: string
+              description: 长期影响
+              example: 需要向系统设计和架构方向转型
+        impact_summary:
+          type: string
+          description: 影响总结
+          example: AI将在短期内提升开发效率，但长期来看，软件工程师需要向更高层次的系统设计和业务理解方向发展
+
+    TransitionPath:
+      type: object
+      description: 转型路径
+      properties:
+        title:
+          type: string
+          description: 路径标题
+          example: 系统架构师路径
+        steps:
+          type: array
+          description: 步骤列表
+          items:
+            type: string
+          example: ["学习分布式系统", "掌握云原生技术", "积累架构设计经验"]
+
+    ProfessionTransitionAdvice:
+      type: object
+      description: 职业转型建议
+      properties:
+        transition_paths:
+          type: array
+          description: 转型路径列表
+          items:
+            type: string
+          example: ["系统架构师", "技术经理", "产品经理"]
+        recommended_skills:
+          type: array
+          description: 推荐技能列表
+          items:
+            type: string
+          example: ["云原生架构", "分布式系统设计", "业务领域知识"]
+        recommended_tools:
+          type: array
+          description: 推荐工具列表
+          items:
+            type: string
+          example: ["Kubernetes", "Terraform", "Docker"]
+        recommended_paths:
+          type: array
+          description: 推荐学习路径
+          items:
+            $ref: '#/components/schemas/TransitionPath'
+        related_articles:
+          type: array
+          description: 相关文章ID列表
+          items:
+            type: integer
+          example: [1, 2, 3]
+        advice_summary:
+          type: string
+          description: 建议总结
+          example: 建议向系统架构和技术管理方向发展，加强业务理解能力
+
+    ProfessionMarketData:
+      type: object
+      description: 职业市场数据
+      properties:
+        market_trend:
+          type: string
+          description: 市场趋势
+          enum: [growing, stable, declining]
+          example: growing
+        market_trend_description:
+          type: string
+          description: 市场趋势描述
+          example: 数字化转型推动软件工程师需求持续增长
+        salary_impact:
+          type: string
+          description: 薪资影响
+          enum: [positive, neutral, negative]
+          example: positive
+        salary_change_rate:
+          type: number
+          format: float
+          description: 薪资变化率(%)
+          example: 8.5
+        avg_salary:
+          type: number
+          format: float
+          description: 平均薪资(元)
+          example: 25000
+        job_demand_trend:
+          type: string
+          description: 就业需求趋势
+          example: 上升
+        supply_demand_ratio:
+          type: number
+          format: float
+          description: 供需比
+          example: 1.2
+        data_source:
+          type: string
+          description: 数据来源
+          example: 拉勾网、BOSS直聘
+        data_update_date:
+          type: string
+          format: date
+          description: 数据更新日期
+          example: '2026-04-01'
+
+    ProfessionDetail:
+      type: object
+      description: 职业详细信息
+      allOf:
+        - $ref: '#/components/schemas/ProfessionBrief'
+        - type: object
+          properties:
+            impact_analysis:
+              $ref: '#/components/schemas/ProfessionImpactAnalysis'
+            transition_advice:
+              $ref: '#/components/schemas/ProfessionTransitionAdvice'
+            market_data:
+              $ref: '#/components/schemas/ProfessionMarketData'
+            created_at:
+              type: string
+              format: date-time
+              description: 创建时间
+              example: '2026-04-08T10:00:00Z'
+            updated_at:
+              type: string
+              format: date-time
+              description: 更新时间
+              example: '2026-04-08T10:00:00Z'
+
+    ProfessionListResponse:
+      type: object
+      description: 职业列表响应
+      properties:
+        code:
+          type: integer
+          description: 响应码
+          example: 200
+        message:
+          type: string
+          description: 响应消息
+          example: success
+        data:
+          type: object
+          properties:
+            professions:
+              type: array
+              description: 职业列表
+              items:
+                $ref: '#/components/schemas/ProfessionBrief'
+            total:
+              type: integer
+              description: 总数
+              example: 50
+            page:
+              type: integer
+              description: 当前页码
+              example: 1
+            page_size:
+              type: integer
+              description: 每页数量
+              example: 12
+
+    ProfessionDetailResponse:
+      type: object
+      description: 职业详情响应
+      properties:
+        code:
+          type: integer
+          description: 响应码
+          example: 200
+        message:
+          type: string
+          description: 响应消息
+          example: success
+        data:
+          $ref: '#/components/schemas/ProfessionDetail'
+
+    # ============ 学习路径相关模型 ============
+
+    LearningPath:
+      type: object
+      description: 学习路径
+      properties:
+        id:
+          type: integer
+          description: 学习路径 ID
+          example: 1
+        title:
+          type: string
+          description: 学习路径标题
+          example: Python 入门教程
+        slug:
+          type: string
+          description: URL 友好的标识
+          example: python-basics
+        icon:
+          type: string
+          description: Emoji 图标
+          example: "🐍"
+        description:
+          type: string
+          description: 学习路径描述
+          example: 从零开始学习 Python 编程
+        difficulty:
+          type: string
+          description: 难度等级
+          enum: [beginner, intermediate, advanced]
+          example: beginner
+        level_label:
+          type: string
+          description: 难度等级标签
+          example: 入门
+        estimated_days:
+          type: integer
+          description: 预计学习天数
+          example: 30
+        estimated_hours:
+          type: integer
+          description: 预计学习小时数
+          example: 60
+        chapter_count:
+          type: integer
+          description: 章节数量
+          example: 12
+        student_count:
+          type: integer
+          description: 学习人数
+          example: 1500
+        cover_image:
+          type: string
+          description: 封面图片 URL
+          example: https://example.com/cover.jpg
+        is_featured:
+          type: boolean
+          description: 是否推荐
+          example: true
+
+    LearningPathDetail:
+      type: object
+      description: 学习路径详情（包含章节）
+      allOf:
+        - $ref: '#/components/schemas/LearningPath'
+        - type: object
+          properties:
+            learning_goals:
+              type: array
+              items:
+                type: string
+              description: 学习目标
+              example: ["掌握 Python 基础语法", "理解面向对象编程"]
+            target_audience:
+              type: array
+              items:
+                type: string
+              description: 目标受众
+              example: ["编程初学者", "转行开发者"]
+            published_at:
+              type: string
+              format: date-time
+              description: 发布时间
+              example: "2026-01-01T00:00:00Z"
+            chapters:
+              type: array
+              items:
+                $ref: '#/components/schemas/PathChapter'
+              description: 章节列表
+
+    PathChapter:
+      type: object
+      description: 学习路径章节
+      properties:
+        id:
+          type: integer
+          description: 章节 ID
+          example: 1
+        path_id:
+          type: integer
+          description: 所属学习路径 ID
+          example: 1
+        title:
+          type: string
+          description: 章节标题
+          example: Python 基础语法
+        slug:
+          type: string
+          description: 章节 slug
+          example: basic-syntax
+        description:
+          type: string
+          description: 章节描述
+          example: 学习 Python 的基础语法
+        content_type:
+          type: string
+          description: 内容类型
+          enum: [article, video, exercise]
+          example: article
+        estimated_hours:
+          type: number
+          description: 预计学习小时数
+          example: 2
+        order_index:
+          type: integer
+          description: 排序索引
+          example: 1
+        is_free:
+          type: boolean
+          description: 是否免费
+          example: true
+
+    PathChapterDetail:
+      type: object
+      description: 章节详情（包含完整内容）
+      allOf:
+        - $ref: '#/components/schemas/PathChapter'
+        - type: object
+          properties:
+            content:
+              type: string
+              description: 章节内容
+              example: "文章内容..."
+            video_url:
+              type: string
+              description: 视频 URL
+              example: ""
+            external_links:
+              type: array
+              items:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  url:
+                    type: string
+              description: 外部链接列表
+              example: []
+
+    ChapterDetailWithNav:
+      type: object
+      description: 章节详情（包含前后章节导航）
+      properties:
+        chapter:
+          $ref: '#/components/schemas/PathChapterDetail'
+        prev:
+          type: object
+          nullable: true
+          description: 前一章信息
+          properties:
+            id:
+              type: integer
+              example: 1
+            path_id:
+              type: integer
+              example: 1
+            title:
+              type: string
+              example: "前置章节"
+            slug:
+              type: string
+              example: "prev-chapter"
+            description:
+              type: string
+              example: "前一章描述"
+            content_type:
+              type: string
+              example: article
+            estimated_hours:
+              type: number
+              example: 2
+            order_index:
+              type: integer
+              example: 1
+            is_free:
+              type: boolean
+              example: true
+        next:
+          type: object
+          nullable: true
+          description: 下一章信息
+          properties:
+            id:
+              type: integer
+              example: 2
+            path_id:
+              type: integer
+              example: 1
+            title:
+              type: string
+              example: "数据类型与变量"
+            slug:
+              type: string
+              example: "data-types"
+            description:
+              type: string
+              example: "学习 Python 的数据类型"
+            content_type:
+              type: string
+              example: article
+            estimated_hours:
+              type: number
+              example: 3
+            order_index:
+              type: integer
+              example: 2
+            is_free:
+              type: boolean
+              example: true
+
+    LevelInfo:
+      type: object
+      description: 难度等级信息
+      properties:
+        id:
+          type: string
+          description: 难度等级 ID
+          example: beginner
+        level:
+          type: string
+          description: 难度等级
+          enum: [beginner, intermediate, advanced]
+          example: beginner
+        name:
+          type: string
+          description: 等级名称
+          example: 入门
+        icon:
+          type: string
+          description: Emoji 图标
+          example: "🌱"
+        description:
+          type: string
+          description: 等级描述
+          example: 零基础友好，讲解基础概念和工具使用
+        color:
+          type: string
+          description: 显示颜色
+          example: "#4ade80"
+        min_hours:
+          type: integer
+          description: 最少学习小时数
+          example: 20
+        max_hours:
+          type: integer
+          description: 最多学习小时数
+          example: 40
+
+    LearningProgress:
+      type: object
+      description: 学习进度
+      properties:
+        id:
+          type: integer
+          description: 进度记录 ID
+          example: 1
+        user_id:
+          type: string
+          description: 用户 ID
+          example: user-123
+        path_id:
+          type: integer
+          description: 学习路径 ID
+          example: 1
+        chapter_id:
+          type: integer
+          description: 当前章节 ID
+          example: 5
+        status:
+          type: string
+          description: 进度状态
+          enum: [in_progress, completed]
+          example: in_progress
+        time_spent:
+          type: integer
+          description: 花费时间（分钟）
+          example: 180
+        notes:
+          type: string
+          description: 学习笔记
+          example: 学习笔记
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+          example: "2026-03-01T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: 更新时间
+          example: "2026-03-08T15:30:00Z"
+
+    SaveProgressRequest:
+      type: object
+      description: 保存学习进度请求
+      required:
+        - user_id
+        - path_id
+        - chapter_id
+        - status
+      properties:
+        user_id:
+          type: string
+          description: 用户 ID
+          example: user-123
+        session_id:
+          type: string
+          description: 会话 ID（未登录时使用）
+          example: session-abc
+        path_id:
+          type: integer
+          description: 学习路径 ID
+          example: 1
+        chapter_id:
+          type: integer
+          description: 章节 ID
+          example: 5
+        status:
+          type: string
+          description: 进度状态
+          enum: [in_progress, completed]
+          example: completed
+        time_spent:
+          type: integer
+          description: 花费时间（分钟）
+          example: 60
+        notes:
+          type: string
+          description: 学习笔记
+          example: 这一章讲得很好
+
+    LearningDashboard:
+      type: object
+      description: 学习路径仪表盘
+      properties:
+        path:
+          $ref: '#/components/schemas/LearningPath'
+        chapters:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 1
+              title:
+                type: string
+                example: "Python 基础语法"
+              slug:
+                type: string
+                example: "basic-syntax"
+              order_index:
+                type: integer
+                example: 1
+          description: 章节列表
+        completed_chapters:
+          type: array
+          items:
+            type: integer
+          description: 已完成章节 ID 列表
+          example: [1, 2]
+        progress:
+          type: object
+          description: 进度信息
+          properties:
+            total_chapters:
+              type: integer
+              description: 总章节数
+              example: 12
+            completed_count:
+              type: integer
+              description: 已完成章节数
+              example: 2
+            progress_percentage:
+              type: number
+              format: float
+              description: 完成百分比
+              example: 16.67
+
+# ============ 工具库 Schema ============
+ToolCategoriesResponse:
+  type: object
+  description: 工具类别列表响应
+  properties:
+    code:
+      type: integer
+      example: 0
+    message:
+      type: string
+      example: "success"
+    data:
+      type: array
+      items:
+        $ref: '#/components/schemas/ToolCategory'
+
+ToolCategory:
+  type: object
+  properties:
+    id:
+      type: integer
+      description: 类别ID
+      example: 1
+    name:
+      type: string
+      description: 类别名称
+      example: "写作类"
+    slug:
+      type: string
+      description: URL友好的标识
+      example: "writing"
+    icon:
+      type: string
+      description: 图标
+      example: "✍️"
+    description:
+      type: string
+      description: 类别描述
+      example: "用于写作、文案创作的 AI 工具"
+    sort_order:
+      type: integer
+      description: 排序顺序
+      example: 1
+    featured:
+      type: boolean
+      description: 是否精选
+      example: true
+    status:
+      type: integer
+      description: 状态（1-启用，0-禁用）
+      example: 1
+    created_at:
+      type: string
+      format: date-time
+      description: 创建时间
+      example: "2026-04-11T00:00:00Z"
+    updated_at:
+      type: string
+      format: date-time
+      description: 更新时间
+      example: "2026-04-11T00:00:00Z"
+
+ToolsResponse:
+  type: object
+  description: 工具列表响应
+  properties:
+    code:
+      type: integer
+      example: 0
+    message:
+      type: string
+      example: "success"
+    data:
+      type: object
+      properties:
+        list:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tool'
+        total:
+          type: integer
+          description: 总数
+          example: 200
+        page:
+          type: integer
+          description: 当前页码
+          example: 1
+        page_size:
+          type: integer
+          description: 每页数量
+          example: 20
+
+ToolResponse:
+  type: object
+  properties:
+    id:
+      type: integer
+      description: 工具ID
+      example: 1
+    name:
+      type: string
+      description: 工具名称
+      example: "ChatGPT"
+    slug:
+      type: string
+      description: URL友好的标识
+      example: "chatgpt"
+    icon:
+      type: string
+      description: 工具图标
+      example: "🤖"
+    description:
+      type: string
+      description: 工具描述
+      example: "OpenAI 开发的大型语言模型"
+    official_url:
+      type: string
+      description: 官方网站
+      example: "https://chat.openai.com"
+    documentation_url:
+      type: string
+      description: 文档链接
+      example: "https://help.openai.com"
+    pricing:
+      type: string
+      description: 定价信息（JSON）
+      example: "{\"free\":{\"available\":true,\"limit\":\"每天消息限额\"}}"
+    pricing_description:
+      type: string
+      description: 定价说明
+      example: "免费版每天有消息配额，Plus 版本 $20/月"
+    category_id:
+      type: integer
+      description: 所属类别ID
+      example: 1
+    difficulty:
+      type: string
+      description: 难度等级
+      example: "beginner"
+    rating:
+      type: number
+      format: float
+      description: 平均评分（0-5）
+      example: 4.8
+    review_count:
+      type: integer
+      description: 评测数量
+      example: 2300
+    view_count:
+      type: integer
+      description: 浏览量
+      example: 15000
+    popularity:
+      type: integer
+      description: 热度值
+      example: 95
+    tags:
+      type: string
+      description: 标签列表（JSON）
+      example: "[1,2,3,7]"
+    featured:
+      type: boolean
+      description: 是否精选
+      example: true
+    status:
+      type: integer
+      description: 状态（1-上架，0-下架）
+      example: 1
+    created_at:
+      type: string
+      format: date-time
+      description: 创建时间
+      example: "2026-04-11T00:00:00Z"
+    updated_at:
+      type: string
+      format: date-time
+      description: 更新时间
+      example: "2026-04-11T00:00:00Z"
+
+# ============ 全局错误响应 ============
+x-error-codes:
+  200: 请求成功
+  400: 请求参数错误
+  401: 未授权或认证失败
+  403: 权限不足
+  404: 资源不存在
+  500: 服务器内部错误

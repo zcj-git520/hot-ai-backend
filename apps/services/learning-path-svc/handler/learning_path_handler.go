@@ -53,11 +53,13 @@ func (h *LearningPathHandler) GetLearningPaths(w http.ResponseWriter, r *http.Re
 	}
 
 	difficulty := r.URL.Query().Get("difficulty")
+	search := r.URL.Query().Get("search")
 
 	resp, err := h.learningPathService.GetLearningPaths(&service.GetLearningPathsRequest{
 		Page:       page,
 		PageSize:   pageSize,
 		Difficulty: difficulty,
+		Search:     search,
 	})
 	if err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)

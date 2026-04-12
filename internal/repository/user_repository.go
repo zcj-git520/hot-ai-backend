@@ -23,6 +23,7 @@ type UserRepository interface {
 	// 查询
 	FindUsers(ctx context.Context, offset, limit int, status *models.UserStatus) ([]*models.User, int64, error)
 	UpdateLastLogin(ctx context.Context, id, ip string) error
+	GetUserCount() (int64, error)
 
 	// 角色管理
 	AddRole(ctx context.Context, userID, roleID string) error
@@ -168,4 +169,13 @@ func (r *userRepository) HasPermission(ctx context.Context, userID, permissionNa
 		Where("user_roles.user_id = ? AND permissions.name = ?", userID, permissionName).
 		Count(&count).Error
 	return count > 0, err
+}
+
+// GetUserCount 获取用户总数
+func (r *userRepository) GetUserCount() (int64, error) {
+	var total int64
+	if err := r.db.Model(&models.User{}).Where("status = ?", models.UserStatusActive).Count(&total).Error; err != nil {
+		return 0, err
+	}
+	return total, nil
 }

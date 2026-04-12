@@ -1,0 +1,32 @@
+# 环境变量（包含敏感信息）
+.env
+
+# PID 文件
+.pids/*.pid
+
+# 日志文件
+logs/*.log
+logs/**/*.log
+
+# Docker 数据卷（可选）
+docker/mysql-data/
+docker/mongodb-data/
+docker/redis-data/
+docker/prometheus-data/
+docker/grafana-data/
+
+# 备份文件
+*.bak
+*.backup
+*.sql.gz
+
+# 编辑器配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
