@@ -12,7 +12,7 @@ Port: 8004
   #   DSN: "host=localhost port=3306 user=root password=password dbname=hot_ai charset=utf8mb4 parseTime=true"
 DataSource:
   MySQL:
-    DSN: root:zcj123456@tcp(127.0.0.1:3306)/hot_ai?charset=utf8mb4&parseTime=true&loc=Local
+    DSN: root:shds@Admin123@tcp(192.168.50.109:13306)/hot_ai?charset=utf8mb4&parseTime=true&loc=Local
 # 日志配置
 Log:
   ServiceName: tool-svc

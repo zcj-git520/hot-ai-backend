@@ -58,7 +58,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 5. 返回成功响应
-	httpx.OkJsonCtx(r.Context(), w, resp)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(resp))
 }
 
 // Register 用户注册
@@ -334,7 +334,7 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 4. 返回成功响应
-	httpx.OkJsonCtx(r.Context(), w, resp)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(resp))
 }
 
 // Logout 用户登出

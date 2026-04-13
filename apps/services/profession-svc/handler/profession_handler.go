@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"hot-ai-backend/internal/service"
+	"hot-ai-backend/internal/types"
 
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
@@ -54,7 +55,7 @@ func (h *ProfessionHandler) GetProfessions(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, resp)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(resp))
 }
 
 // GetProfessionByID 根据 ID 获取职业详情
@@ -91,7 +92,7 @@ func (h *ProfessionHandler) GetProfessionByID(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, profession)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(profession))
 }
 
 // GetCategories 获取职业分类列表
@@ -102,13 +103,13 @@ func (h *ProfessionHandler) GetCategories(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, categories)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(categories))
 }
 
 // GetRiskLevels 获取风险等级信息
 func (h *ProfessionHandler) GetRiskLevels(w http.ResponseWriter, r *http.Request) {
 	riskLevels := h.professionService.GetRiskLevels()
-	httpx.OkJsonCtx(r.Context(), w, riskLevels)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(riskLevels))
 }
 
 // SearchProfessions 搜索职业
@@ -135,5 +136,5 @@ func (h *ProfessionHandler) SearchProfessions(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, resp)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(resp))
 }

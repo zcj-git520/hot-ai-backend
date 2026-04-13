@@ -6,6 +6,7 @@ import (
 
 	"hot-ai-backend/apps/gateway/middleware"
 	"hot-ai-backend/internal/service"
+	"hot-ai-backend/internal/types"
 
 	"github.com/gorilla/mux"
 	"github.com/zeromicro/go-zero/rest/httpx"
@@ -39,7 +40,7 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, resp)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(resp))
 }
 
 // UpdateProfile 更新用户资料
@@ -62,9 +63,9 @@ func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{
+	httpx.OkJsonCtx(r.Context(), w, types.Success(map[string]interface{}{
 		"success": true,
-	})
+	}))
 }
 
 // UpdatePreferences 更新偏好设置
@@ -87,9 +88,9 @@ func (h *UserHandler) UpdatePreferences(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{
+	httpx.OkJsonCtx(r.Context(), w, types.Success(map[string]interface{}{
 		"success": true,
-	})
+	}))
 }
 
 // ChangePassword 修改密码
@@ -112,9 +113,9 @@ func (h *UserHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{
+	httpx.OkJsonCtx(r.Context(), w, types.Success(map[string]interface{}{
 		"success": true,
-	})
+	}))
 }
 
 // GetFavorites 获取收藏列表
@@ -140,7 +141,7 @@ func (h *UserHandler) GetFavorites(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, resp)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(resp))
 }
 
 // AddFavorite 添加收藏
@@ -163,10 +164,10 @@ func (h *UserHandler) AddFavorite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{
+	httpx.OkJsonCtx(r.Context(), w, types.Success(map[string]interface{}{
 		"success": true,
 		"favorite": favorite,
-	})
+	}))
 }
 
 // DeleteFavorite 删除收藏
@@ -191,7 +192,7 @@ func (h *UserHandler) DeleteFavorite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{
+	httpx.OkJsonCtx(r.Context(), w, types.Success(map[string]interface{}{
 		"success": true,
-	})
+	}))
 }

@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"hot-ai-backend/internal/service"
+	"hot-ai-backend/internal/types"
 
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
@@ -66,7 +67,7 @@ func (h *LearningPathHandler) GetLearningPaths(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, resp)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(resp))
 }
 
 // GetLearningPathByID 根据ID获取学习路径详情
@@ -89,7 +90,7 @@ func (h *LearningPathHandler) GetLearningPathByID(w http.ResponseWriter, r *http
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, path)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(path))
 }
 
 // GetLearningPathBySlug 根据slug获取学习路径详情
@@ -106,7 +107,7 @@ func (h *LearningPathHandler) GetLearningPathBySlug(w http.ResponseWriter, r *ht
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, path)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(path))
 }
 
 // GetPathChapters 获取路径的所有章节
@@ -150,7 +151,7 @@ func (h *LearningPathHandler) GetPathChapters(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, chapters)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(chapters))
 }
 
 // GetChapterByID 根据章节ID获取详情
@@ -182,7 +183,7 @@ func (h *LearningPathHandler) GetChapterByID(w http.ResponseWriter, r *http.Requ
 		"next":    next,
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, result)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(result))
 }
 
 // GetChapterBySlug 根据路径slug和章节slug获取章节详情
@@ -226,7 +227,7 @@ func (h *LearningPathHandler) GetChapterBySlug(w http.ResponseWriter, r *http.Re
 		"next":    next,
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, result)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(result))
 }
 
 // GetFeaturedPaths 获取推荐路径
@@ -242,13 +243,13 @@ func (h *LearningPathHandler) GetFeaturedPaths(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, paths)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(paths))
 }
 
 // GetLevelInfo 获取难度等级信息
 func (h *LearningPathHandler) GetLevelInfo(w http.ResponseWriter, r *http.Request) {
 	levelInfo := h.learningPathService.GetLevelInfo()
-	httpx.OkJsonCtx(r.Context(), w, levelInfo)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(levelInfo))
 }
 
 // GetPathProgress 获取用户的学习进度
@@ -273,7 +274,7 @@ func (h *LearningPathHandler) GetPathProgress(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, progress)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(progress))
 }
 
 // GetCompletedChapters 获取用户已完成的章节列表
@@ -298,9 +299,9 @@ func (h *LearningPathHandler) GetCompletedChapters(w http.ResponseWriter, r *htt
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{
+	httpx.OkJsonCtx(r.Context(), w, types.Success(map[string]interface{}{
 		"completed_chapters": chapterIDs,
-	})
+	}))
 }
 
 // SaveProgress 保存学习进度
@@ -316,10 +317,10 @@ func (h *LearningPathHandler) SaveProgress(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{
+	httpx.OkJsonCtx(r.Context(), w, types.Success(map[string]interface{}{
 		"success": true,
 		"message": "进度已保存",
-	})
+	}))
 }
 
 // GetPathDashboard 获取路径学习仪表盘（综合统计）
@@ -358,7 +359,7 @@ func (h *LearningPathHandler) GetPathDashboard(w http.ResponseWriter, r *http.Re
 		completedChapters = []uint{}
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{
+	httpx.OkJsonCtx(r.Context(), w, types.Success(map[string]interface{}{
 		"path":               path,
 		"chapters":           chapters,
 		"completed_chapters": completedChapters,
@@ -367,5 +368,5 @@ func (h *LearningPathHandler) GetPathDashboard(w http.ResponseWriter, r *http.Re
 			"completed_count":     len(completedChapters),
 			"progress_percentage": float64(len(completedChapters)) / float64(len(chapters)) * 100,
 		},
-	})
+	}))
 }

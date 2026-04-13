@@ -7,6 +7,7 @@ import (
 
 	"github.com/zeromicro/go-zero/rest/httpx"
 	"hot-ai-backend/internal/service"
+	"hot-ai-backend/internal/types"
 )
 
 type ToolServiceHandler struct {
@@ -27,7 +28,7 @@ func (h *ToolServiceHandler) ToolCategories(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	httpx.OkJsonCtx(ctx, w, categories)
+	httpx.OkJsonCtx(ctx, w, types.Success(categories))
 }
 
 // ToolList 工具列表
@@ -109,7 +110,7 @@ func (h *ToolServiceHandler) ToolList(w http.ResponseWriter, r *http.Request) {
 		"page_size": params["page_size"],
 	}
 
-	httpx.OkJsonCtx(ctx, w, result)
+	httpx.OkJsonCtx(ctx, w, types.Success(result))
 }
 
 // ToolDetail 工具详情（通过slug）
@@ -141,7 +142,7 @@ func (h *ToolServiceHandler) ToolDetail(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	httpx.OkJsonCtx(ctx, w, tool)
+	httpx.OkJsonCtx(ctx, w, types.Success(tool))
 }
 
 // ToolDetailByID 工具详情（通过id）
@@ -179,5 +180,5 @@ func (h *ToolServiceHandler) ToolDetailByID(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	httpx.OkJsonCtx(ctx, w, tool)
+	httpx.OkJsonCtx(ctx, w, types.Success(tool))
 }

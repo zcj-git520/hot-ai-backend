@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"hot-ai-backend/internal/service"
+	"hot-ai-backend/internal/types"
 
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
@@ -46,7 +47,7 @@ func (h *ArticleHandler) GetArticles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, resp)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(resp))
 }
 
 // GetArticleByID 根据ID获取文章详情
@@ -80,7 +81,7 @@ func (h *ArticleHandler) GetArticleByID(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, article)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(article))
 }
 
 // GetCategories 获取文章分类列表
@@ -91,5 +92,5 @@ func (h *ArticleHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, categories)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(categories))
 }

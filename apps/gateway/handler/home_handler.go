@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"hot-ai-backend/internal/service"
+	"hot-ai-backend/internal/types"
 
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
@@ -42,7 +43,7 @@ func (h *HomeHandler) GetHomeStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, stats)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(stats))
 }
 
 // GetHomeTopics 热门话题
@@ -53,9 +54,9 @@ func (h *HomeHandler) GetHomeTopics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{
+	httpx.OkJsonCtx(r.Context(), w, types.Success(map[string]interface{}{
 		"topics": topics,
-	})
+	}))
 }
 
 // GetHomeRankings 热门排行
@@ -66,9 +67,9 @@ func (h *HomeHandler) GetHomeRankings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{
+	httpx.OkJsonCtx(r.Context(), w, types.Success(map[string]interface{}{
 		"items": rankings,
-	})
+	}))
 }
 
 // getHomeStats 获取首页统计数据
