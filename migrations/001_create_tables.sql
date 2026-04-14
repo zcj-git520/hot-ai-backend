@@ -66,12 +66,14 @@ CREATE TABLE `tags` (
   UNIQUE KEY `uk_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='标签主表';
 
--- 4. 资讯主表（正文存储在MongoDB）
+-- 4. 资讯主表（当前正文存储在content字段，后续迁移到MongoDB）
 CREATE TABLE `articles` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '资讯唯一标识',
   `title` varchar(200) NOT NULL COMMENT '资讯标题',
   `summary` text NOT NULL COMMENT 'AI生成摘要',
-  `content_mongo_id` varchar(50) NOT NULL COMMENT 'MongoDB正文ObjectId',
+  `content` longtext COMMENT '文章正文内容（临时存储，后续迁移至MongoDB）',
+  `content_mongo_id` varchar(50) DEFAULT NULL COMMENT 'MongoDB正文ObjectId（迁移后使用）',
+  `original_url` varchar(500) DEFAULT NULL COMMENT '原文链接地址',
   `source_id` bigint NOT NULL COMMENT '来源媒体ID',
   `author` varchar(50) DEFAULT NULL COMMENT '作者名称',
   `category_id` int NOT NULL COMMENT '分类ID',
