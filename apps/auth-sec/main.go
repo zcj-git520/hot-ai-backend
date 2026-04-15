@@ -3,22 +3,20 @@ package main
 import (
 	"flag"
 	"fmt"
+	"hot-ai-backend/apps/auth-sec/handler"
+	"hot-ai-backend/apps/auth-sec/middleware"
 	"net/http"
 	"os"
 
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/rest"
-
-	"hot-ai-backend/apps/gateway/handler"
-	"hot-ai-backend/apps/gateway/middleware"
 	"hot-ai-backend/internal/database"
 	"hot-ai-backend/internal/repository"
 	"hot-ai-backend/internal/service"
 	"hot-ai-backend/internal/utils/mailutil"
-	lpathHandler "hot-ai-backend/apps/services/learning-path-svc/handler"
 )
 
-var configFile = flag.String("f", "apps/gateway/etc/gateway.yaml", "the config file")
+var configFile = flag.String("f", "apps/auth-sec/etc/auth.yaml", "the config file")
 
 // GatewayConf 网关配置
 type GatewayConf struct {
@@ -144,9 +142,6 @@ func registerRoutes(server *rest.Server, authMiddleware *middleware.AuthMiddlewa
 	// 创建用户处理器并注入依赖
 	userHandler := handler.NewUserHandler(userService, favoriteService)
 
-	// 创建学习路径处理器
-	learningPathHandler := lpathHandler.NewLearningPathHandler(learningPathService)
-
 	// 创建首页处理器
 	homeHandler := handler.NewHomeHandler(articleService, professionService, learningPathService, userService, toolService)
 
@@ -261,91 +256,5 @@ func registerRoutes(server *rest.Server, authMiddleware *middleware.AuthMiddlewa
 		Method:  http.MethodGet,
 		Path:    "/api/home/rankings",
 		Handler: homeHandler.GetHomeRankings,
-	})
-
-	// ===== 学习路径路由 (公开) =====
-	// 获取学习路径列表
-	server.AddRoute(rest.Route{
-		Method:  http.MethodGet,
-		Path:    "/api/learning-paths",
-		Handler: learningPathHandler.GetLearningPaths,
-	})
-
-	// 获取推荐路径
-	server.AddRoute(rest.Route{
-		Method:  http.MethodGet,
-		Path:    "/api/learning-paths/featured",
-		Handler: learningPathHandler.GetFeaturedPaths,
-	})
-
-	// 获取难度等级信息
-	server.AddRoute(rest.Route{
-		Method:  http.MethodGet,
-		Path:    "/api/learning-paths/levels",
-		Handler: learningPathHandler.GetLevelInfo,
-	})
-
-	// 根据 ID 获取学习路径详情
-	server.AddRoute(rest.Route{
-		Method:  http.MethodGet,
-		Path:    "/api/learning-paths/id/{id}",
-		Handler: learningPathHandler.GetLearningPathByID,
-	})
-
-	// 根据 slug 获取学习路径详情
-	server.AddRoute(rest.Route{
-		Method:  http.MethodGet,
-		Path:    "/api/learning-paths/slug/{slug}",
-		Handler: learningPathHandler.GetLearningPathBySlug,
-	})
-
-	// 获取路径的所有章节
-	server.AddRoute(rest.Route{
-		Method:  http.MethodGet,
-		Path:    "/api/learning-paths/{path_id}/chapters",
-		Handler: learningPathHandler.GetPathChapters,
-	})
-
-	// 根据章节 ID 获取详情
-	server.AddRoute(rest.Route{
-		Method:  http.MethodGet,
-		Path:    "/api/chapters/{chapter_id}",
-		Handler: learningPathHandler.GetChapterByID,
-	})
-
-	// 根据路径 slug 和章节 slug 获取章节详情
-	server.AddRoute(rest.Route{
-		Method:  http.MethodGet,
-		Path:    "/api/learning-paths/{path_slug}/chapters/{chapter_slug}",
-		Handler: learningPathHandler.GetChapterBySlug,
-	})
-
-	// 获取路径学习仪表盘（综合统计）
-	server.AddRoute(rest.Route{
-		Method:  http.MethodGet,
-		Path:    "/api/learning-paths/dashboard",
-		Handler: learningPathHandler.GetPathDashboard,
-	})
-
-	// ===== 学习路径路由 (需要认证) =====
-	// 获取用户的学习进度
-	server.AddRoute(rest.Route{
-		Method:  http.MethodGet,
-		Path:    "/api/learning-paths/progress",
-		Handler: authMiddleware.Handle(learningPathHandler.GetPathProgress),
-	})
-
-	// 获取用户已完成的章节列表
-	server.AddRoute(rest.Route{
-		Method:  http.MethodGet,
-		Path:    "/api/learning-paths/completed-chapters",
-		Handler: authMiddleware.Handle(learningPathHandler.GetCompletedChapters),
-	})
-
-	// 保存学习进度
-	server.AddRoute(rest.Route{
-		Method:  http.MethodPost,
-		Path:    "/api/learning-paths/save-progress",
-		Handler: authMiddleware.Handle(learningPathHandler.SaveProgress),
 	})
 }

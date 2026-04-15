@@ -3,19 +3,18 @@ package main
 import (
 	"flag"
 	"fmt"
+	"hot-ai-backend/apps/tool-svc/handler"
 	"net/http"
 	"os"
 
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/rest"
-
-	"hot-ai-backend/apps/services/tool-svc/handler"
 	"hot-ai-backend/internal/database"
 	"hot-ai-backend/internal/repository"
 	"hot-ai-backend/internal/service"
 )
 
-var configFile = flag.String("f", "apps/services/tool-svc/etc/tool-svc.yaml", "the config file")
+var configFile = flag.String("f", "apps/tool-svc/etc/tool-svc.yaml", "the config file")
 
 // ToolSvcConf 工具服务配置
 type ToolSvcConf struct {

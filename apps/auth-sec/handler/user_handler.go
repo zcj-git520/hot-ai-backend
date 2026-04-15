@@ -2,9 +2,9 @@ package handler
 
 import (
 	"errors"
+	"hot-ai-backend/apps/auth-sec/middleware"
 	"net/http"
 
-	"hot-ai-backend/apps/gateway/middleware"
 	"hot-ai-backend/internal/service"
 	"hot-ai-backend/internal/types"
 
@@ -165,7 +165,7 @@ func (h *UserHandler) AddFavorite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.OkJsonCtx(r.Context(), w, types.Success(map[string]interface{}{
-		"success": true,
+		"success":  true,
 		"favorite": favorite,
 	}))
 }

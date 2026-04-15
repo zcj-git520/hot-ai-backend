@@ -85,7 +85,7 @@ func StartCrawlerService(ctx context.Context, c CrawlerConf) {
 	go StartScheduler(ctx, c, db)
 
 	// 4. 启动 Redis Stream 消费者
-	go StartRedisStreamConsumer(ctx, c, redisClient)
+	go StartRedisStreamConsumer(ctx, c, redisClient, db)
 
 	// 5. 初始化 AI 处理模块
 	if c.AI.APIKey != "" && c.AI.APIKey != "your-api-key-here" {

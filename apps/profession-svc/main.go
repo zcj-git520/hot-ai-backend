@@ -3,19 +3,19 @@ package main
 import (
 	"flag"
 	"fmt"
+	"hot-ai-backend/apps/profession-svc/handler"
 	"net/http"
 	"os"
 
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/rest"
 
-	"hot-ai-backend/apps/services/profession-svc/handler"
 	"hot-ai-backend/internal/database"
 	"hot-ai-backend/internal/repository"
 	"hot-ai-backend/internal/service"
 )
 
-var configFile = flag.String("f", "apps/services/profession-svc/etc/profession-svc.yaml", "the config file")
+var configFile = flag.String("f", "apps/profession-svc/etc/profession-svc.yaml", "the config file")
 
 // ProfessionSvcConf 职业风险服务配置
 type ProfessionSvcConf struct {
