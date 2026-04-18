@@ -609,6 +609,16 @@ func fetchArticlesFromMinifluxFeed(ctx context.Context, client *MinifluxClient, 
 		time.Sleep(1 * time.Second)
 	}
 
+	// 处理完成后，标记该 Feed 的所有条目为已读
+	if len(articles) > 0 {
+		logx.Infof("准备标记 Feed %d 为已读", feed.ID)
+		if err := client.MarkFeedAsRead(feed.ID); err != nil {
+			logx.Errorf("标记 Feed %d 为已读失败: %v", feed.ID, err)
+		} else {
+			logx.Infof("成功标记 Feed %d 为已读，共 %d 篇文章", feed.ID, len(articles))
+		}
+	}
+
 	return articles, nil
 }
 

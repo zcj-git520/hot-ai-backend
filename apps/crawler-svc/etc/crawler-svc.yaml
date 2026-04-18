@@ -26,7 +26,7 @@ Crawler:
   MaxConcurrency: 5
   Timeout: 30
   ConcurrentFetch: 10
-  FetchInterval: 3  # 5分钟抓取一次
+  FetchInterval: 300  # 5分钟抓取一次
   MaxRetries: 3
   EnableTraditionalCrawling: false  # 是否启用传统HTML网页爬取（false表示只使用RSS）
 

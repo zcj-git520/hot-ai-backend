@@ -212,17 +212,18 @@ func (c *MinifluxClient) GetFeeds() ([]Feed, error) {
 	return feeds, nil
 }
 
-// GetFeedEntries 获取指定 Feed 的条目
+// GetFeedEntries 获取指定 Feed 的未读条目
 func (c *MinifluxClient) GetFeedEntries(feedID uint64, limit int) ([]Entry, error) {
 	// 使用 /v1/entries 端点，通过 feed_id 参数过滤
 	url := fmt.Sprintf("%s/v1/entries", c.config.BaseURL)
 
-	// 注意：status 参数不支持逗号分隔的多个值，不传则返回所有状态
+	// 只获取未读的条目
 	params := map[string]interface{}{
 		"limit":     limit,
 		"order":     "published_at",
 		"direction": "desc",
 		"feed_id":   feedID,
+		"status":    "unread", // 只获取未读条目
 	}
 
 	logx.Infof("请求 Miniflux API: %s, 参数: %+v", url, params)
@@ -245,8 +246,40 @@ func (c *MinifluxClient) GetFeedEntries(feedID uint64, limit int) ([]Entry, erro
 		return nil, fmt.Errorf("解析响应失败: %w", err)
 	}
 
-	logx.Infof("从 Feed %d 获取到 %d 条条目", feedID, len(entriesResp.Entries))
+	logx.Infof("从 Feed %d 获取到 %d 条未读条目", feedID, len(entriesResp.Entries))
 	return entriesResp.Entries, nil
+}
+
+// MarkFeedAsRead 标记指定 Feed 的所有条目为已读
+func (c *MinifluxClient) MarkFeedAsRead(feedID uint64) error {
+	url := fmt.Sprintf("%s/v1/feeds/%d/mark-all-as-read", c.config.BaseURL, feedID)
+
+	logx.Infof("标记 Feed %d 为已读", feedID)
+
+	// PUT 请求，不需要 body
+	req, err := http.NewRequest("PUT", url, nil)
+	if err != nil {
+		return fmt.Errorf("创建请求失败: %w", err)
+	}
+
+	for k, v := range c.headers {
+		req.Header.Set(k, v)
+	}
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("请求失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("HTTP 错误: %d, 响应: %s", resp.StatusCode, string(body))
+	}
+
+	logx.Infof("成功标记 Feed %d 为已读", feedID)
+	return nil
 }
 
 // doRequest 执行 HTTP 请求
