@@ -1,6 +1,6 @@
 module hot-ai-backend
 
-go 1.22.6
+go 1.25.0
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.0
@@ -8,13 +8,15 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/redis/go-redis/v9 v9.6.1
 	github.com/zeromicro/go-zero v1.7.0
-	golang.org/x/crypto v0.32.0
+	golang.org/x/crypto v0.49.0
 	gorm.io/driver/mysql v1.5.2
 	gorm.io/gorm v1.25.5
 )
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/PuerkitoBio/goquery v1.12.0 // indirect
+	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -48,9 +50,9 @@ require (
 	go.opentelemetry.io/otel/trace v1.24.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	go.uber.org/automaxprocs v1.5.3 // indirect
-	golang.org/x/net v0.34.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/net v0.52.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240711142825-46eb208f015d // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240701130421-f6361c86f094 // indirect
 	google.golang.org/grpc v1.65.0 // indirect

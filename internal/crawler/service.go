@@ -10,20 +10,12 @@ import (
 
 // CrawlerConf 采集服务配置
 type CrawlerConf struct {
-	Name    string `json:"Name,optional,default=crawler-svc"`
-	Consul  struct {
+	Name   string `json:"Name,optional,default=crawler-svc"`
+	Consul struct {
 		Host string `json:",optional"`
 		Port int    `json:",default=8500"`
 		Key  string `json:",optional"`
 	} `json:"Consul,optional"`
-	// Redis 配置
-	Redis struct {
-		Host     string `json:",optional"`
-		Port     int    `json:",default=6379"`
-		Password string `json:",optional"`
-		DB       int    `json:",default=0"`
-		Type     string `json:",optional"`
-	} `json:"Redis"`
 	// 数据库配置
 	DataSource struct {
 		MySQL struct {
@@ -42,13 +34,20 @@ type CrawlerConf struct {
 	} `json:"AI,optional"`
 	// 爬虫配置
 	Crawler struct {
-		MaxConcurrency  int `json:",default=5"`
-		Timeout         int `json:",default=30"`
-		UserAgent       string `json:",optional"`
-		ConcurrentFetch int `json:",default=10"`
-		FetchInterval   int `json:",default=300"`
-		MaxRetries      int `json:",default=3"`
+		MaxConcurrency            int    `json:",default=5"`
+		Timeout                   int    `json:",default=30"`
+		UserAgent                 string `json:",optional"`
+		ConcurrentFetch           int    `json:",default=10"`
+		FetchInterval             int    `json:",default=300"`
+		MaxRetries                int    `json:",default=3"`
+		EnableTraditionalCrawling bool   `json:",default=true"` // 是否启用传统HTML网页爬取
 	} `json:"Crawler,optional"`
+	// Miniflux 配置（RSS 源）
+	Miniflux struct {
+		BaseURL string `json:",optional"`
+		APIKey  string `json:",optional"`
+		Enabled bool   `json:",default=false"`
+	} `json:"Miniflux,optional"`
 	// 日志配置
 	Log struct {
 		Mode     string `json:",optional"`
@@ -72,27 +71,38 @@ func StartCrawlerService(ctx context.Context, c CrawlerConf) {
 			return
 		}
 		logx.Info("数据库连接成功")
+
+		// 设置全局数据库连接（供 crawler 模块使用）
+		SetGlobalDB(db)
 	}
 
-	// 2. 初始化 Redis 客户端
-	redisClient := InitRedis(c)
-	if redisClient == nil {
-		logx.Error("Redis 初始化失败")
-		return
+	// 2. 初始化 Miniflux 客户端（如果启用）
+	var minifluxClient *MinifluxClient
+	if c.Miniflux.Enabled && c.Miniflux.BaseURL != "" && c.Miniflux.APIKey != "" {
+		minifluxClient = NewMinifluxClient(c.Miniflux.BaseURL, c.Miniflux.APIKey)
+		logx.Infof("Miniflux 客户端初始化成功: %s", c.Miniflux.BaseURL)
+
+		// 测试连接
+		//feeds, err := minifluxClient.GetFeeds()
+		//if err != nil {
+		//	logx.Errorf("Miniflux 连接测试失败: %v", err)
+		//} else {
+		//	logx.Infof("Miniflux 中有 %d 个订阅源", len(feeds))
+		//}
+	} else {
+		logx.Info("Miniflux 未启用，将使用传统爬虫模式")
 	}
 
 	// 3. 启动定时任务调度器
-	go StartScheduler(ctx, c, db)
+	go StartScheduler(ctx, c, db, minifluxClient)
 
-	// 4. 启动 Redis Stream 消费者
-	go StartRedisStreamConsumer(ctx, c, redisClient, db)
-
-	// 5. 初始化 AI 处理模块
+	// 4. 初始化 AI 处理模块（可选）
 	if c.AI.APIKey != "" && c.AI.APIKey != "your-api-key-here" {
-		go StartAIProcessor(ctx, c, redisClient)
+		logx.Info("AI 处理模块已启用")
+		// TODO: 实现 AI 处理逻辑
 	}
 
-	logx.Info("采集服务启动完成")
+	logx.Info("采集服务启动完成（支持 RSS + 传统爬虫）")
 }
 
 // InitLog 初始化日志配置

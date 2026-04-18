@@ -9,18 +9,13 @@ Consul:
 # 数据库配置
 DataSource:
   MySQL:
-    DSN: root:shds@Admin123@tcp(192.168.50.109:13306)/hot_ai?charset=utf8mb4&parseTime=true&loc=Local
+#    DSN: root:shds@Admin123@tcp(192.168.50.109:13306)/hot_ai?charset=utf8mb4&parseTime=true&loc=Local
+   DSN: root:zcj123456@tcp(8.130.23.164:3306)/hot_ai?charset=utf8mb4&parseTime=true&loc=Local
   MongoDB:
     URI: mongodb://localhost:27017
     Database: hot_ai_articles
 
-# Redis 配置
-Redis:
-  Host: 192.168.41.63
-  Port: 16379
-  Password: Shds@402
-
-# AI 配置
+# AI 配置（可选）
 AI:
   Provider: ali-yun-tongyi
   APIKey: your-api-key-here
@@ -28,13 +23,21 @@ AI:
 
 # 抓取配置
 Crawler:
+  MaxConcurrency: 5
+  Timeout: 30
   ConcurrentFetch: 10
-  FetchInterval: 300
+  FetchInterval: 3  # 5分钟抓取一次
   MaxRetries: 3
+  EnableTraditionalCrawling: false  # 是否启用传统HTML网页爬取（false表示只使用RSS）
+
+# Miniflux 配置（RSS 源）
+Miniflux:
+  Enabled: true
+  BaseURL: http://192.168.50.109:8599
+  APIKey: f1a80532bf18a10828e013564965935b78ffceab211dcac167d615f70e151ad5
 
 # 日志配置
 Log:
-  Mode: file
-  Path: logs/crawler-svc.log
+  Mode: console
   Level: info
-  Encoding: json
+  Encoding: plain
