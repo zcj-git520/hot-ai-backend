@@ -223,7 +223,7 @@ func (c *MinifluxClient) GetFeedEntries(feedID uint64, limit int) ([]Entry, erro
 		"order":     "published_at",
 		"direction": "desc",
 		"feed_id":   feedID,
-		"status":    "unread", // 只获取未读条目
+		//"status":    "unread", // 只获取未读条目
 	}
 
 	logx.Infof("请求 Miniflux API: %s, 参数: %+v", url, params)

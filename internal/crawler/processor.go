@@ -14,7 +14,7 @@ import (
 
 // ProcessAndStoreArticle 处理并存储文章到数据库
 // isRSS: 是否为 RSS 源，RSS 源跳过内容清洗和标题提取
-func ProcessAndStoreArticle(ctx context.Context, article models.Article, db *gorm.DB, isRSS bool) error {
+func ProcessAndStoreArticle(ctx context.Context, article models.Article, db *gorm.DB, isRSS bool, translateClient *TranslateClient) error {
 	logx.Infof("处理文章内容: %v (RSS: %v)", article.Title, isRSS)
 
 	// 1. 检查必要字段
@@ -24,30 +24,39 @@ func ProcessAndStoreArticle(ctx context.Context, article models.Article, db *gor
 	}
 
 	// 2. 处理内容（RSS 源跳过清洗）
-	cleanedContent := article.Content
 	if !isRSS {
 		// HTML 源需要清洗内容
-		cleanedContent = cleanContent(article.Content)
-		if cleanedContent == "" {
+		article.Content = cleanContent(article.Content)
+		if article.Content == "" {
 			logx.Error("清洗后内容为空，跳过处理")
 			return nil
 		}
 	}
 
-	// 3. 提取标签（从 article.Tags 切片）
+	// 3. 翻译文章（如果启用翻译服务）
+	if translateClient != nil {
+		err := translateClient.TranslateArticle(ctx, &article)
+		if err != nil {
+			logx.Errorf("翻译文章失败: %v", err)
+		}
+		logx.Infof("文章翻译成功")
+
+	}
+
+	// 4. 提取标签（从 article.Tags 切片）
 	var tags []string
 	if len(article.Tags) > 0 {
 		tags = make([]string, len(article.Tags))
 		copy(tags, article.Tags)
 	}
 
-	// 4. 检查数据库连接
+	// 5. 检查数据库连接
 	if db == nil {
 		logx.Error("数据库连接未初始化")
 		return nil
 	}
 
-	// 5. 获取或创建分类
+	// 6. 获取或创建分类
 	//categoryName := "默认分类"
 	//if article.CategoryName != "" {
 	//	categoryName = article.CategoryName
@@ -58,7 +67,7 @@ func ProcessAndStoreArticle(ctx context.Context, article models.Article, db *gor
 	//	return err
 	//}
 
-	// 6. 获取或创建来源
+	// 7. 获取或创建来源
 	sourceName := article.SourceName
 	if sourceName == "" {
 		sourceName = "未知来源"
@@ -73,7 +82,7 @@ func ProcessAndStoreArticle(ctx context.Context, article models.Article, db *gor
 		return err
 	}
 
-	// 7. 准备文章数据
+	// 8. 准备文章数据
 	now := time.Now()
 	publishedAt := now
 	if !article.PublishedAt.IsZero() {
@@ -83,13 +92,13 @@ func ProcessAndStoreArticle(ctx context.Context, article models.Article, db *gor
 	// 设置文章字段（RSS 源跳过标题提取）
 	if article.Title == "" && !isRSS {
 		// HTML 源需要从内容中提取标题
-		article.Title = extractTitle(cleanedContent)
+		article.Title = extractTitle(article.Content)
 		if article.Title == "" {
 			article.Title = "未命名文章"
 		}
 	}
-	article.Summary = truncateString(cleanedContent, 500)
-	article.Content = cleanedContent
+	article.Summary = truncateString(article.Content, 200)
+	article.SummaryEn = truncateString(article.ContentEn, 200)
 	article.SourceID = source.ID
 	article.CategoryID = 1
 	if article.Author == "" {
@@ -100,13 +109,13 @@ func ProcessAndStoreArticle(ctx context.Context, article models.Article, db *gor
 		article.Status = 1 // 1-已发布
 	}
 
-	// 8. 创建文章
+	// 9. 创建文章
 	if err := db.Create(&article).Error; err != nil {
 		logx.Errorf("创建文章失败: %v", err)
 		return err
 	}
 
-	// 9. 创建文章统计
+	// 10. 创建文章统计
 	stats := &models.ArticleStats{
 		ArticleID:    article.ID,
 		ViewCount:    0,
@@ -115,7 +124,7 @@ func ProcessAndStoreArticle(ctx context.Context, article models.Article, db *gor
 	}
 	db.Create(stats)
 
-	// 10. 处理标签关联
+	// 11. 处理标签关联
 	if len(tags) > 0 {
 		processArticleTags(db, article.ID, tags)
 	}
@@ -173,12 +182,13 @@ func extractTitle(content string) string {
 	return ""
 }
 
-// truncateString 截断字符串
+// truncateString 截断字符串（按字符而非字节，避免UTF-8多字节字符被截断）
 func truncateString(s string, maxLen int) string {
-	if len(s) <= maxLen {
+	if len([]rune(s)) <= maxLen {
 		return s
 	}
-	return s[:maxLen] + "..."
+	runes := []rune(s)
+	return string(runes[:maxLen]) + "..."
 }
 
 // createOrUpdateCategory 创建或更新分类

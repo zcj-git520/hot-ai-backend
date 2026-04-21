@@ -48,6 +48,12 @@ type CrawlerConf struct {
 		APIKey  string `json:",optional"`
 		Enabled bool   `json:",default=false"`
 	} `json:"Miniflux,optional"`
+	// AI Server 服务配置
+	AIServer struct {
+		BaseURL string `json:",optional"`
+		Enabled bool   `json:",default=false"`
+		Model   string `json:",optional"`
+	} `json:"AIServer,optional"`
 	// 日志配置
 	Log struct {
 		Mode     string `json:",optional"`
@@ -93,14 +99,20 @@ func StartCrawlerService(ctx context.Context, c CrawlerConf) {
 		logx.Info("Miniflux 未启用，将使用传统爬虫模式")
 	}
 
-	// 3. 启动定时任务调度器
-	go StartScheduler(ctx, c, db, minifluxClient)
-
-	// 4. 初始化 AI 处理模块（可选）
-	if c.AI.APIKey != "" && c.AI.APIKey != "your-api-key-here" {
-		logx.Info("AI 处理模块已启用")
-		// TODO: 实现 AI 处理逻辑
+	// 3. 初始化 AI Server 客户端（用于翻译等功能）
+	var translateClient *TranslateClient
+	if c.AIServer.Enabled && c.AIServer.BaseURL != "" {
+		translateClient = NewTranslateClient(c.AIServer.BaseURL)
+		if c.AIServer.Model != "" {
+			translateClient.model = c.AIServer.Model
+		}
+		logx.Infof("AI Server 客户端初始化成功: %s (模型: %s)", c.AIServer.BaseURL, translateClient.model)
+	} else {
+		logx.Info("AI Server 服务未启用，文章将不会被翻译")
 	}
+
+	// 4. 启动定时任务调度器
+	go StartScheduler(ctx, c, db, minifluxClient, translateClient)
 
 	logx.Info("采集服务启动完成（支持 RSS + 传统爬虫）")
 }

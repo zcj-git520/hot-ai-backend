@@ -26,7 +26,7 @@ Crawler:
   MaxConcurrency: 5
   Timeout: 30
   ConcurrentFetch: 10
-  FetchInterval: 300  # 5分钟抓取一次
+  FetchInterval: 30  # 5分钟抓取一次
   MaxRetries: 3
   EnableTraditionalCrawling: false  # 是否启用传统HTML网页爬取（false表示只使用RSS）
 
@@ -41,3 +41,9 @@ Log:
   Mode: console
   Level: info
   Encoding: plain
+
+# AI Server 服务配置（提供翻译等功能）
+AIServer:
+  BaseURL: http://localhost:8005
+  Enabled: true
+  Model: glm  # 模型: glm, deepseek, qwen, custom

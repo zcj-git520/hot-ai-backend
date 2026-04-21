@@ -58,6 +58,9 @@ type Article struct {
 	Title          string    `gorm:"column:title;type:varchar(200);not null" json:"title"`
 	Summary        string    `gorm:"column:summary;type:text;not null" json:"summary"`
 	Content        string    `gorm:"column:content;type:longtext" json:"content,omitempty"`
+	TitleEn        string    `gorm:"column:title_en;type:varchar(200)" json:"title_en,omitempty"`
+	SummaryEn      string    `gorm:"column:summary_en;type:text" json:"summary_en,omitempty"`
+	ContentEn      string    `gorm:"column:content_en;type:longtext" json:"content_en,omitempty"`
 	ContentMongoID string    `gorm:"column:content_mongo_id;type:varchar(50);uniqueIndex:uk_content_mongo_id" json:"content_mongo_id,omitempty"`
 	OriginalURL    string    `gorm:"column:original_url;type:varchar(500)" json:"original_url,omitempty"`
 	SourceID       uint      `gorm:"column:source_id;not null;index:idx_source_id" json:"source_id"`

@@ -24,7 +24,7 @@ type Config struct {
 
 // InitDB 初始化数据库连接
 func InitDB(cfg Config) error {
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&collation=utf8mb4_unicode_ci&parseTime=True&loc=Local",
 		cfg.User,
 		cfg.Password,
 		cfg.Host,

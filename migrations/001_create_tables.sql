@@ -82,13 +82,7 @@ CREATE TABLE `articles` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_content_mongo_id` (`content_mongo_id`),
-  KEY `idx_source_id` (`source_id`),
-  KEY `idx_category_id` (`category_id`),
-  KEY `idx_published_at` (`published_at`),
-  KEY `idx_status` (`status`),
-  CONSTRAINT `fk_articles_source` FOREIGN KEY (`source_id`) REFERENCES `sources` (`id`),
-  CONSTRAINT `fk_articles_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`)
+  UNIQUE KEY `uk_title` (`title`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='资讯主表';
 
 -- 5. 文章统计表
