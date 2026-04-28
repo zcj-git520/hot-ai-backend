@@ -14,7 +14,7 @@ import (
 
 // ProcessAndStoreArticle 处理并存储文章到数据库
 // isRSS: 是否为 RSS 源，RSS 源跳过内容清洗和标题提取
-func ProcessAndStoreArticle(ctx context.Context, article models.Article, db *gorm.DB, isRSS bool, translateClient *TranslateClient) error {
+func ProcessAndStoreArticle(ctx context.Context, article models.Article, db *gorm.DB, isRSS bool, translateClient *TranslateClient, aiArticleClient *AIArticleClient) error {
 	logx.Infof("处理文章内容: %v (RSS: %v)", article.Title, isRSS)
 
 	// 1. 检查必要字段
@@ -33,39 +33,53 @@ func ProcessAndStoreArticle(ctx context.Context, article models.Article, db *gor
 		}
 	}
 
-	// 3. 翻译文章（如果启用翻译服务）
-	if translateClient != nil {
+	// 3. AI文章分析（优先进行，判断是否AI相关）
+	var aiResult *AIArticleResponse
+	if aiArticleClient != nil {
+		result, shouldSkip, err := aiArticleClient.AnalyzeArticleAndSkip(ctx, article.Title, article.Content)
+		if err != nil {
+			logx.Errorf("AI文章分析失败: %v", err)
+		} else if shouldSkip {
+			// 非AI相关文章，跳过（不翻译、不存储）
+			logx.Infof("非AI相关文章，跳过: %s", article.Title)
+			return nil
+		}
+		aiResult = result
+
+		// 使用AI分析结果补充文章信息
+		if aiResult != nil {
+			article.CategoryID = getCategoryIDByName(aiResult.Category)
+			if aiResult.Summary != "" {
+				article.Summary = aiResult.Summary
+			}
+		}
+	}
+
+	// 4. 仅对AI相关文章进行翻译
+	if translateClient != nil && aiResult != nil {
 		err := translateClient.TranslateArticle(ctx, &article)
 		if err != nil {
 			logx.Errorf("翻译文章失败: %v", err)
 		}
 		logx.Infof("文章翻译成功")
-
 	}
 
-	// 4. 提取标签（从 article.Tags 切片）
+	// 5. 提取标签（从 article.Tags 切片和AI分析结果）
 	var tags []string
 	if len(article.Tags) > 0 {
 		tags = make([]string, len(article.Tags))
 		copy(tags, article.Tags)
 	}
+	// 合并AI分析提取的关键词作为标签
+	if aiResult != nil && len(aiResult.Keywords) > 0 {
+		tags = append(tags, aiResult.Keywords...)
+	}
 
-	// 5. 检查数据库连接
+	// 6. 检查数据库连接
 	if db == nil {
 		logx.Error("数据库连接未初始化")
 		return nil
 	}
-
-	// 6. 获取或创建分类
-	//categoryName := "默认分类"
-	//if article.CategoryName != "" {
-	//	categoryName = article.CategoryName
-	//}
-	//categoryModel, err := createOrUpdateCategory(db, categoryName)
-	//if err != nil {
-	//	logx.Errorf("创建/更新分类失败: %v", err)
-	//	return err
-	//}
 
 	// 7. 获取或创建来源
 	sourceName := article.SourceName
@@ -97,10 +111,15 @@ func ProcessAndStoreArticle(ctx context.Context, article models.Article, db *gor
 			article.Title = "未命名文章"
 		}
 	}
-	article.Summary = truncateString(article.Content, 200)
+	// 如果AI分析没有返回摘要，使用内容前200字符
+	if article.Summary == "" {
+		article.Summary = truncateString(article.Content, 200)
+	}
 	article.SummaryEn = truncateString(article.ContentEn, 200)
 	article.SourceID = source.ID
-	article.CategoryID = 1
+	if article.CategoryID == 0 {
+		article.CategoryID = 1 // 默认分类
+	}
 	if article.Author == "" {
 		article.Author = "未知作者"
 	}
@@ -131,6 +150,20 @@ func ProcessAndStoreArticle(ctx context.Context, article models.Article, db *gor
 
 	logx.Infof("文章存储成功: %s (ID: %d)", article.Title, article.ID)
 	return nil
+}
+
+// getCategoryIDByName 根据分类名称获取分类ID
+func getCategoryIDByName(categoryName string) uint {
+	categoryMap := map[string]uint{
+		"动态": 1, // news - AI动态
+		"学习": 3, // learn - 学习资源
+		"工具": 4, // tool - 工具产品
+		"职业": 2, // impact - 职业影响
+	}
+	if id, ok := categoryMap[categoryName]; ok {
+		return id
+	}
+	return 1 // 默认返回"动态"
 }
 
 // cleanContent 清洗 HTML 内容
