@@ -18,7 +18,7 @@ import (
 )
 
 // StartScheduler 启动定时任务调度器
-func StartScheduler(ctx context.Context, c CrawlerConf, db *gorm.DB, minifluxClient *MinifluxClient, translateClient *TranslateClient) {
+func StartScheduler(ctx context.Context, c CrawlerConf, db *gorm.DB, minifluxClient *MinifluxClient, aiClient *AIClient) {
 	logx.Info("启动定时任务调度器...")
 
 	ticker := time.NewTicker(time.Duration(c.Crawler.FetchInterval) * time.Second)
@@ -34,12 +34,12 @@ func StartScheduler(ctx context.Context, c CrawlerConf, db *gorm.DB, minifluxCli
 
 			// 1. 处理 RSS 源（通过 Miniflux）
 			if minifluxClient != nil && c.Miniflux.Enabled {
-				processRSSSources(ctx, c, db, minifluxClient, translateClient)
+				processRSSSources(ctx, c, db, minifluxClient, aiClient)
 			}
 
 			// 2. 处理传统 HTML 源（根据配置开关决定）
 			if c.Crawler.EnableTraditionalCrawling {
-				ExecuteFetchTasks(ctx, c, db, translateClient)
+				ExecuteFetchTasks(ctx, c, db, aiClient)
 			} else {
 				logx.Debug("传统 HTML 爬虫已禁用，跳过执行")
 			}
@@ -48,7 +48,7 @@ func StartScheduler(ctx context.Context, c CrawlerConf, db *gorm.DB, minifluxCli
 }
 
 // ExecuteFetchTasks 执行抓取任务
-func ExecuteFetchTasks(ctx context.Context, c CrawlerConf, db *gorm.DB, translateClient *TranslateClient) {
+func ExecuteFetchTasks(ctx context.Context, c CrawlerConf, db *gorm.DB, aiClient *AIClient) {
 	if db == nil {
 		logx.Error("数据库未初始化")
 		return
@@ -90,7 +90,7 @@ func ExecuteFetchTasks(ctx context.Context, c CrawlerConf, db *gorm.DB, translat
 			defer wg.Done()
 			defer func() { <-semaphore }() // 释放信号量
 
-			executeSingleFetchTask(ctx, c, db, src, translateClient)
+			executeSingleFetchTask(ctx, c, db, src, aiClient)
 		}(source)
 	}
 
@@ -102,7 +102,7 @@ func ExecuteFetchTasks(ctx context.Context, c CrawlerConf, db *gorm.DB, translat
 }
 
 // executeSingleFetchTask 执行单个抓取任务
-func executeSingleFetchTask(ctx context.Context, c CrawlerConf, db *gorm.DB, source models.CrawlerSource, translateClient *TranslateClient) {
+func executeSingleFetchTask(ctx context.Context, c CrawlerConf, db *gorm.DB, source models.CrawlerSource, aiClient *AIClient) {
 	logx.Infof("开始抓取源：%s (%s)", source.Name, source.URL)
 
 	fetchStartTime := time.Now()
@@ -155,7 +155,7 @@ func executeSingleFetchTask(ctx context.Context, c CrawlerConf, db *gorm.DB, sou
 	}
 
 	// 3. 处理抓取结果（直接存储到数据库）
-	itemsFetched, err := processFetchedContent(ctx, c, db, source, body, translateClient)
+	itemsFetched, err := processFetchedContent(ctx, c, db, source, body, aiClient)
 	if err != nil {
 		logx.Errorf("处理抓取内容失败：%s: %v", source.Name, err)
 		fetchLog.Status = models.FetchLogStatusFailed
@@ -245,7 +245,7 @@ func sendHTTPRequest(ctx context.Context, source models.CrawlerSource) (*http.Re
 }
 
 // processFetchedContent 处理抓取到的内容（支持两级爬取：列表页 + 详情页）
-func processFetchedContent(ctx context.Context, c CrawlerConf, db *gorm.DB, source models.CrawlerSource, content []byte, translateClient *TranslateClient) (int, error) {
+func processFetchedContent(ctx context.Context, c CrawlerConf, db *gorm.DB, source models.CrawlerSource, content []byte, aiClient *AIClient) (int, error) {
 	logx.Infof("开始处理抓取内容: %s (类型: %s)", source.Name, source.SourceType)
 
 	// 解析 parse_rules
@@ -261,12 +261,12 @@ func processFetchedContent(ctx context.Context, c CrawlerConf, db *gorm.DB, sour
 	switch source.SourceType {
 	case models.CrawlerSourceTypeHTML:
 		// HTML 类型：先解析列表页获取文章链接，再逐个抓取详情
-		return processHTMLSource(ctx, c, db, source, string(content), rules, translateClient)
+		return processHTMLSource(ctx, c, db, source, string(content), rules, aiClient)
 	default:
 		// 其他类型：直接处理内容（非 RSS，需要解析）
 		articleData := models.Article{}
 
-		if err := ProcessAndStoreArticle(ctx, articleData, db, false, translateClient); err != nil {
+		if err := ProcessAndStoreArticle(ctx, articleData, db, false, aiClient); err != nil {
 			return 0, fmt.Errorf("处理并存储文章失败：%w", err)
 		}
 
@@ -275,7 +275,7 @@ func processFetchedContent(ctx context.Context, c CrawlerConf, db *gorm.DB, sour
 }
 
 // processHTMLSource 处理 HTML 类型的抓取源（两级爬取）
-func processHTMLSource(ctx context.Context, c CrawlerConf, db *gorm.DB, source models.CrawlerSource, htmlContent string, rules map[string]interface{}, translateClient *TranslateClient) (int, error) {
+func processHTMLSource(ctx context.Context, c CrawlerConf, db *gorm.DB, source models.CrawlerSource, htmlContent string, rules map[string]interface{}, aiClient *AIClient) (int, error) {
 	logx.Infof("开始解析 HTML 列表页: %s", source.Name)
 
 	// 第1步：从列表页提取文章链接
@@ -354,7 +354,7 @@ func processHTMLSource(ctx context.Context, c CrawlerConf, db *gorm.DB, source m
 		}
 
 		// 存储到数据库（HTML 源需要解析）
-		if err := ProcessAndStoreArticle(ctx, articleModel, db, false, translateClient); err != nil {
+		if err := ProcessAndStoreArticle(ctx, articleModel, db, false, aiClient); err != nil {
 			logx.Errorf("存储文章失败 [%s]: %v", link.URL, err)
 			continue
 		}
@@ -467,7 +467,7 @@ func updateCrawlerSource(db *gorm.DB, sourceID string, fetchLog *models.CrawlerF
 }
 
 // processRSSSources 处理 RSS 源（直接从 Miniflux 获取所有 feeds）
-func processRSSSources(ctx context.Context, c CrawlerConf, db *gorm.DB, minifluxClient *MinifluxClient, translateClient *TranslateClient) {
+func processRSSSources(ctx context.Context, c CrawlerConf, db *gorm.DB, minifluxClient *MinifluxClient, aiClient *AIClient) {
 	logx.Info("开始处理 RSS 源（从 Miniflux 直接获取）...")
 
 	// 1. 直接从 Miniflux 获取所有订阅源
@@ -505,7 +505,7 @@ func processRSSSources(ctx context.Context, c CrawlerConf, db *gorm.DB, miniflux
 		}
 
 		// 从 Miniflux 获取该 feed 的最新文章
-		articles, err := fetchArticlesFromMinifluxFeed(ctx, minifluxClient, feed, virtualSource, translateClient)
+		articles, err := fetchArticlesFromMinifluxFeed(ctx, minifluxClient, feed, virtualSource, aiClient)
 		if err != nil {
 			logx.Errorf("从 Miniflux 获取文章失败 [%s]: %v", feed.Title, err)
 			continue
@@ -521,7 +521,7 @@ func processRSSSources(ctx context.Context, c CrawlerConf, db *gorm.DB, miniflux
 }
 
 // fetchArticlesFromMinifluxFeed 从 Miniflux 获取指定 Feed 的文章
-func fetchArticlesFromMinifluxFeed(ctx context.Context, client *MinifluxClient, feed Feed, source models.CrawlerSource, translateClient *TranslateClient) ([]map[string]interface{}, error) {
+func fetchArticlesFromMinifluxFeed(ctx context.Context, client *MinifluxClient, feed Feed, source models.CrawlerSource, aiClient *AIClient) ([]map[string]interface{}, error) {
 	logx.Infof("从 Miniflux 获取 Feed 文章: %s (ID: %d)", feed.Title, feed.ID)
 
 	// 获取该 Feed 的最新条目（最多 10 篇）
@@ -590,7 +590,7 @@ func fetchArticlesFromMinifluxFeed(ctx context.Context, client *MinifluxClient, 
 		}
 
 		// 存储到数据库（RSS 源不需要解析文章内容）
-		if err := ProcessAndStoreArticle(ctx, articleModel, getDatabaseConnection(), true, translateClient); err != nil {
+		if err := ProcessAndStoreArticle(ctx, articleModel, getDatabaseConnection(), true, aiClient); err != nil {
 			logx.Errorf("存储文章失败 [%s]: %v", entry.Title, err)
 		} else {
 			// 将 Article 模型转换为 map 用于返回

@@ -3,26 +3,24 @@ info:
   title: Hot AI Backend API
   description: |
     Hot AI 后端服务 API 接口文档
-    
+
     ## 认证说明
     除了注册和登录接口外，其他接口都需要在请求头中携带 JWT Token：
     ```
     Authorization: Bearer <your_access_token>
     ```
-    
+
     Token 有效期为 24 小时，过期后可以使用 Refresh Token 刷新。
   version: 1.0.0
   contact:
     name: API Support
   license:
     name: MIT
-
 servers:
   - url: http://localhost:8080/api/v1
     description: 本地开发环境
   - url: https://api.hot-ai.com/api/v1
     description: 生产环境
-
 tags:
   - name: 认证
     description: 用户认证相关接口
@@ -36,7 +34,8 @@ tags:
     description: 学习路径与进度管理相关接口
   - name: 工具库
     description: AI工具库相关接口
-
+  - name: 管理后台
+    description: 管理后台相关接口
 paths:
   /auth/register:
     post:
@@ -45,7 +44,7 @@ paths:
       summary: 用户注册
       description: |-
         创建新用户账号
-        
+
         ## 注册流程说明
         1. 先调用 `/auth/send-registration-code` 发送邮箱验证码
         2. 用户收到验证码后，调用此接口提交注册信息
@@ -62,7 +61,7 @@ paths:
               password: SecurePass123!
               password_confirm: SecurePass123!
               nickname: 用户名
-              verification_code: "123456"
+              verification_code: '123456'
       responses:
         '200':
           description: 注册成功
@@ -83,7 +82,6 @@ paths:
                 code: 400
                 message: 邮箱格式不正确
                 data: null
-
   /auth/login:
     post:
       tags:
@@ -115,7 +113,7 @@ paths:
                   id: user-123
                   email: user@example.com
                   nickname: 测试用户
-                  avatar: ""
+                  avatar: ''
                   roles:
                     - user
         '400':
@@ -138,7 +136,6 @@ paths:
                 code: 401
                 message: 邮箱或密码错误
                 data: null
-
   /auth/refresh:
     post:
       tags:
@@ -174,7 +171,6 @@ paths:
                 code: 401
                 message: Refresh Token 无效或已过期
                 data: null
-
   /auth/logout:
     post:
       tags:
@@ -206,7 +202,6 @@ paths:
                 code: 401
                 message: 未授权访问
                 data: null
-
   /user/profile:
     get:
       tags:
@@ -229,7 +224,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
     put:
       tags:
         - 用户
@@ -267,7 +261,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
   /user/preferences:
     put:
       tags:
@@ -306,7 +299,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
   /user/change-password:
     post:
       tags:
@@ -345,7 +337,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
   /user/favorites:
     get:
       tags:
@@ -390,7 +381,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
     post:
       tags:
         - 用户
@@ -430,7 +420,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
   /user/favorites/{id}:
     delete:
       tags:
@@ -458,20 +447,18 @@ paths:
                   success:
                     type: boolean
                     example: true
-        '404':
-          description: 收藏不存在
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CommonResponse'
         '401':
           description: 未授权
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
-# ============ 文章模块接口 ============
+        '404':
+          description: 收藏不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
   /articles/categories:
     get:
       tags:
@@ -503,7 +490,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
   /articles:
     get:
       tags:
@@ -511,7 +497,7 @@ paths:
       summary: 获取文章列表
       description: |-
         分页获取文章列表,支持按分类筛选
-        
+
         ## 分类代码说明
         - `news`: AI动态
         - `impact`: 职业影响
@@ -542,7 +528,11 @@ paths:
           required: false
           schema:
             type: string
-            enum: [news, impact, learn, tool]
+            enum:
+              - news
+              - impact
+              - learn
+              - tool
       responses:
         '200':
           description: 成功
@@ -588,7 +578,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
   /articles/{id}:
     get:
       tags:
@@ -632,8 +621,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
-  # ============ 职业风险模块接口 ============
   /professions/categories:
     get:
       tags:
@@ -656,7 +643,6 @@ paths:
                   description: 技术开发、运维等相关职业
                   sort_order: 1
                   status: 1
-
   /professions/risk-levels:
     get:
       tags:
@@ -682,7 +668,6 @@ paths:
                   color: '#EF4444'
                   min_score: 80
                   max_score: 100
-
   /professions:
     get:
       tags:
@@ -723,7 +708,11 @@ paths:
           required: false
           schema:
             type: string
-            enum: [extreme, high, medium, low]
+            enum:
+              - extreme
+              - high
+              - medium
+              - low
           example: high
         - name: keyword
           in: query
@@ -739,7 +728,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProfessionListResponse'
-
   /professions/search:
     get:
       tags:
@@ -784,7 +772,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
   /professions/{slug}:
     get:
       tags:
@@ -813,7 +800,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
   /auth/forgot-password:
     post:
       tags:
@@ -821,14 +807,14 @@ paths:
       summary: 忘记密码
       description: |-
         发送重置密码邮件到指定邮箱
-        
+
         ## 安全说明
         - 为了安全考虑，无论邮箱是否注册，都会返回成功提示
         - 防止攻击者通过此接口枚举已注册用户
-        
+
         ## 限流规则
         - 同一邮箱 1 小时内最多发送 1 次
-        
+
         ## 重置链接说明
         - 重置链接包含一次性 token
         - token 有效期为 1 小时
@@ -881,7 +867,6 @@ paths:
                 code: 429
                 message: 操作过于频繁，请 1 小时后再试
                 data: null
-
   /auth/reset-password:
     post:
       tags:
@@ -889,11 +874,11 @@ paths:
       summary: 重置密码
       description: |-
         使用重置 token 设置新密码
-        
+
         ## 密码要求
         - 长度：8-20 位
         - 必须包含大写字母、小写字母、数字、特殊字符
-        
+
         ## 注意事项
         - 重置 token 只能使用一次
         - token 有效期为 1 小时
@@ -960,7 +945,6 @@ paths:
                 code: 404
                 message: 重置链接已过期或无效
                 data: null
-
   /auth/send-registration-code:
     post:
       tags:
@@ -968,11 +952,11 @@ paths:
       summary: 发送注册验证码
       description: |-
         向指定邮箱发送注册验证码，用于验证邮箱所有权
-        
+
         ## 限流规则
         - 同一邮箱 1 分钟内最多发送 1 次
         - 同一邮箱 1 小时内最多发送 5 次
-        
+
         ## 验证码说明
         - 验证码为 6 位数字
         - 有效期 5 分钟
@@ -1032,7 +1016,6 @@ paths:
                 code: 429
                 message: 操作过于频繁，请稍后再试
                 data: null
-
   /auth/send-verification-email:
     post:
       tags:
@@ -1090,11 +1073,6 @@ paths:
                 code: 429
                 message: 操作过于频繁，请稍后再试
                 data: null
-
-  # ===== 学习路径 API =====
-
-  # ---- 学习路径接口 ----
-
   /learning-paths:
     get:
       tags:
@@ -1125,7 +1103,10 @@ paths:
           required: false
           schema:
             type: string
-            enum: [beginner, intermediate, advanced]
+            enum:
+              - beginner
+              - intermediate
+              - advanced
           example: beginner
       responses:
         '200':
@@ -1151,7 +1132,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
   /learning-paths/featured:
     get:
       tags:
@@ -1183,7 +1163,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
   /learning-paths/levels:
     get:
       tags:
@@ -1200,7 +1179,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/LevelInfo'
-
   /learning-paths/id/{id}:
     get:
       tags:
@@ -1229,7 +1207,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
   /learning-paths/slug/{slug}:
     get:
       tags:
@@ -1258,9 +1235,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
-  # ---- 章节接口 ----
-
   /learning-paths/{path_id}/chapters:
     get:
       tags:
@@ -1291,7 +1265,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
   /chapters/{chapter_id}:
     get:
       tags:
@@ -1320,7 +1293,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
   /learning-paths/{path_slug}/chapters/{chapter_slug}:
     get:
       tags:
@@ -1363,9 +1335,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
-  # ---- 学习进度接口 ----
-
   /learning-paths/dashboard:
     get:
       tags:
@@ -1401,7 +1370,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
   /learning-paths/progress:
     get:
       tags:
@@ -1445,7 +1413,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
   /learning-paths/completed-chapters:
     get:
       tags:
@@ -1482,14 +1449,18 @@ paths:
                     type: array
                     items:
                       type: integer
-                    example: [1, 2, 3, 4, 5]
+                    example:
+                      - 1
+                      - 2
+                      - 3
+                      - 4
+                      - 5
         '401':
           description: 未授权
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
   /learning-paths/save-progress:
     post:
       tags:
@@ -1539,8 +1510,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
-# ============ 工具库接口 ============
   /api/tools:
     get:
       tags:
@@ -1597,7 +1566,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
   /api/tools/categories:
     get:
       tags:
@@ -1618,7 +1586,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
   /api/tools/{slug}:
     get:
       tags:
@@ -1653,7 +1620,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
   /api/tools/id/{id}:
     get:
       tags:
@@ -1688,7 +1654,329 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommonResponse'
-
+  /admin/learning-paths:
+    get:
+      tags:
+        - 管理后台
+      summary: 获取学习路径列表（管理后台）
+      description: 获取所有学习路径，支持分页、难度筛选、搜索和状态筛选
+      operationId: getAdminLearningPaths
+      parameters:
+        - name: page
+          in: query
+          description: 页码，默认 1
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          description: 每页数量，默认 20
+          required: false
+          schema:
+            type: integer
+            default: 20
+        - name: difficulty
+          in: query
+          description: 难度筛选
+          required: false
+          schema:
+            type: string
+            enum:
+              - beginner
+              - intermediate
+              - advanced
+        - name: search
+          in: query
+          description: 关键词搜索
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: 状态筛选
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+    post:
+      tags:
+        - 管理后台
+      summary: 创建学习路径
+      description: 创建一个新的学习路径
+      operationId: createAdminLearningPath
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCreateLearningPathRequest'
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningPathDetail'
+  /admin/learning-paths/{id}:
+    get:
+      tags:
+        - 管理后台
+      summary: 获取学习路径详情
+      operationId: getAdminLearningPathById
+      parameters:
+        - name: id
+          in: path
+          description: 学习路径 ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningPathDetail'
+        '404':
+          description: 不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+    put:
+      tags:
+        - 管理后台
+      summary: 更新学习路径
+      operationId: updateAdminLearningPath
+      parameters:
+        - name: id
+          in: path
+          description: 学习路径 ID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdateLearningPathRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningPathDetail'
+    delete:
+      tags:
+        - 管理后台
+      summary: 删除学习路径
+      operationId: deleteAdminLearningPath
+      parameters:
+        - name: id
+          in: path
+          description: 学习路径 ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+  /admin/learning-paths/{id}/publish:
+    post:
+      tags:
+        - 管理后台
+      summary: 发布学习路径
+      operationId: publishAdminLearningPath
+      parameters:
+        - name: id
+          in: path
+          description: 学习路径 ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 发布成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+  /admin/learning-paths/{id}/unpublish:
+    post:
+      tags:
+        - 管理后台
+      summary: 下架学习路径
+      operationId: unpublishAdminLearningPath
+      parameters:
+        - name: id
+          in: path
+          description: 学习路径 ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 下架成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+  /admin/learning-paths/{id}/featured:
+    post:
+      tags:
+        - 管理后台
+      summary: 设置推荐状态
+      operationId: setAdminLearningPathFeatured
+      parameters:
+        - name: id
+          in: path
+          description: 学习路径 ID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - featured
+              properties:
+                featured:
+                  type: boolean
+                  description: 是否推荐
+      responses:
+        '200':
+          description: 设置成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
+  /admin/learning-paths/{path_id}/chapters:
+    get:
+      tags:
+        - 管理后台
+      summary: 获取章节列表
+      operationId: getAdminChapters
+      parameters:
+        - name: path_id
+          in: path
+          description: 学习路径 ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PathChapter'
+    post:
+      tags:
+        - 管理后台
+      summary: 创建章节
+      operationId: createAdminChapter
+      parameters:
+        - name: path_id
+          in: path
+          description: 学习路径 ID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCreateChapterRequest'
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PathChapter'
+  /admin/chapters/{id}:
+    get:
+      tags:
+        - 管理后台
+      summary: 获取章节详情
+      operationId: getAdminChapterById
+      parameters:
+        - name: id
+          in: path
+          description: 章节 ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PathChapterDetail'
+    put:
+      tags:
+        - 管理后台
+      summary: 更新章节
+      operationId: updateAdminChapter
+      parameters:
+        - name: id
+          in: path
+          description: 章节 ID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdateChapterRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PathChapterDetail'
+    delete:
+      tags:
+        - 管理后台
+      summary: 删除章节
+      operationId: deleteAdminChapter
+      parameters:
+        - name: id
+          in: path
+          description: 章节 ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonResponse'
 components:
   securitySchemes:
     bearerAuth:
@@ -1696,9 +1984,7 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: JWT Bearer Token 认证
-
   schemas:
-    # ============ 请求模型 ============
     RegisterRequest:
       type: object
       description: 用户注册请求
@@ -1725,7 +2011,6 @@ components:
           minLength: 2
           maxLength: 20
           example: 用户名
-
     LoginRequest:
       type: object
       description: 用户登录请求
@@ -1743,7 +2028,6 @@ components:
           format: password
           description: 密码
           example: SecurePass123!
-
     RefreshTokenRequest:
       type: object
       description: 刷新 Token 请求
@@ -1754,8 +2038,6 @@ components:
           type: string
           description: Refresh Token
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-
-    # ============ 响应模型 ============
     RegisterResponse:
       type: object
       description: 注册响应
@@ -1768,7 +2050,6 @@ components:
           type: string
           description: 消息
           example: 注册成功，请登录
-
     LoginResponse:
       type: object
       description: 登录响应
@@ -1787,7 +2068,6 @@ components:
           example: 86400
         user:
           $ref: '#/components/schemas/UserInfo'
-
     RefreshTokenResponse:
       type: object
       description: 刷新 Token 响应
@@ -1800,7 +2080,6 @@ components:
           type: integer
           description: 过期时间（秒）
           example: 86400
-
     CommonResponse:
       type: object
       description: 通用响应结构
@@ -1817,7 +2096,6 @@ components:
           type: object
           description: 数据
           nullable: true
-
     UserInfo:
       type: object
       description: 用户基本信息
@@ -1838,7 +2116,7 @@ components:
         avatar:
           type: string
           description: 头像 URL
-          example: ""
+          example: ''
         roles:
           type: array
           description: 角色列表
@@ -1846,7 +2124,6 @@ components:
             type: string
           example:
             - user
-
     UserDetail:
       type: object
       description: 用户详细信息
@@ -1890,13 +2167,12 @@ components:
           type: string
           format: date-time
           description: 创建时间
-          example: "2024-01-01T00:00:00Z"
+          example: '2024-01-01T00:00:00Z'
         updated_at:
           type: string
           format: date-time
           description: 更新时间
-          example: "2024-01-02T00:00:00Z"
-
+          example: '2024-01-02T00:00:00Z'
     UserProfileUpdateRequest:
       type: object
       description: 更新用户资料请求
@@ -1916,7 +2192,6 @@ components:
           description: 个人简介
           maxLength: 500
           example: 这是一个开发者
-
     UserPreferencesUpdateRequest:
       type: object
       description: 更新用户偏好请求
@@ -1950,7 +2225,6 @@ components:
           type: string
           description: 语言
           example: zh-CN
-
     UserPreferences:
       type: object
       description: 用户偏好设置
@@ -1984,7 +2258,6 @@ components:
           type: string
           description: 语言
           example: zh-CN
-
     EmailNotificationSettings:
       type: object
       description: 邮件通知设置
@@ -2001,7 +2274,6 @@ components:
           type: boolean
           description: 周报
           example: true
-
     ChangePasswordRequest:
       type: object
       description: 修改密码请求
@@ -2021,7 +2293,6 @@ components:
           minLength: 8
           maxLength: 20
           example: NewSecurePass123!
-
     FavoriteItem:
       type: object
       description: 收藏项
@@ -2070,8 +2341,7 @@ components:
           type: string
           format: date-time
           description: 创建时间
-          example: "2024-01-01T00:00:00Z"
-
+          example: '2024-01-01T00:00:00Z'
     FavoriteListResponse:
       type: object
       description: 收藏列表响应
@@ -2093,7 +2363,6 @@ components:
           description: 收藏列表
           items:
             $ref: '#/components/schemas/FavoriteItem'
-
     CreateFavoriteRequest:
       type: object
       description: 创建收藏请求
@@ -2134,8 +2403,6 @@ components:
           type: string
           description: 备注
           example: 很重要的文章
-
-    # ============ 文章模块数据模型 ============
     Category:
       type: object
       description: 文章分类
@@ -2168,7 +2435,6 @@ components:
           type: integer
           description: 状态(0-禁用, 1-启用)
           example: 1
-
     Tag:
       type: object
       description: 标签
@@ -2187,7 +2453,6 @@ components:
           format: int64
           description: 标签类型
           example: 1
-
     Article:
       type: object
       description: 文章简要信息(列表项)
@@ -2246,7 +2511,6 @@ components:
           description: 标签列表
           items:
             $ref: '#/components/schemas/Tag'
-
     ArticleDetail:
       type: object
       description: 文章详细信息
@@ -2272,8 +2536,6 @@ components:
               format: date-time
               description: 更新时间
               example: '2026-03-30T10:00:00Z'
-
-    # ============ 职业风险模块数据模型 ============
     ProfessionCategory:
       type: object
       description: 职业分类
@@ -2298,7 +2560,6 @@ components:
           type: integer
           description: 状态(0-待审核, 1-已发布, 2-已删除)
           example: 1
-
     RiskLevelInfo:
       type: object
       description: 风险等级信息
@@ -2310,7 +2571,11 @@ components:
         level:
           type: string
           description: 等级代码
-          enum: [extreme, high, medium, low]
+          enum:
+            - extreme
+            - high
+            - medium
+            - low
           example: extreme
         name:
           type: string
@@ -2336,7 +2601,6 @@ components:
           type: integer
           description: 最大分数
           example: 100
-
     ProfessionBrief:
       type: object
       description: 职业简要信息(列表项)
@@ -2372,7 +2636,11 @@ components:
         risk_level:
           type: string
           description: 风险等级
-          enum: [extreme, high, medium, low]
+          enum:
+            - extreme
+            - high
+            - medium
+            - low
           example: medium
         risk_score:
           type: integer
@@ -2386,7 +2654,6 @@ components:
           type: integer
           description: 浏览量
           example: 1234
-
     ProfessionImpactAnalysis:
       type: object
       description: 职业影响分析
@@ -2396,19 +2663,28 @@ components:
           description: 受影响的任务列表
           items:
             type: string
-          example: ["代码生成", "单元测试编写", "Bug修复"]
+          example:
+            - 代码生成
+            - 单元测试编写
+            - Bug修复
         safe_tasks:
           type: array
           description: 安全的任务列表
           items:
             type: string
-          example: ["系统架构设计", "需求分析", "技术选型"]
+          example:
+            - 系统架构设计
+            - 需求分析
+            - 技术选型
         safe_skills:
           type: array
           description: 安全技能列表
           items:
             type: string
-          example: ["系统设计能力", "业务理解能力", "团队协作能力"]
+          example:
+            - 系统设计能力
+            - 业务理解能力
+            - 团队协作能力
         impact_timeline:
           type: object
           description: 影响时间线
@@ -2429,7 +2705,6 @@ components:
           type: string
           description: 影响总结
           example: AI将在短期内提升开发效率，但长期来看，软件工程师需要向更高层次的系统设计和业务理解方向发展
-
     TransitionPath:
       type: object
       description: 转型路径
@@ -2443,8 +2718,10 @@ components:
           description: 步骤列表
           items:
             type: string
-          example: ["学习分布式系统", "掌握云原生技术", "积累架构设计经验"]
-
+          example:
+            - 学习分布式系统
+            - 掌握云原生技术
+            - 积累架构设计经验
     ProfessionTransitionAdvice:
       type: object
       description: 职业转型建议
@@ -2454,19 +2731,28 @@ components:
           description: 转型路径列表
           items:
             type: string
-          example: ["系统架构师", "技术经理", "产品经理"]
+          example:
+            - 系统架构师
+            - 技术经理
+            - 产品经理
         recommended_skills:
           type: array
           description: 推荐技能列表
           items:
             type: string
-          example: ["云原生架构", "分布式系统设计", "业务领域知识"]
+          example:
+            - 云原生架构
+            - 分布式系统设计
+            - 业务领域知识
         recommended_tools:
           type: array
           description: 推荐工具列表
           items:
             type: string
-          example: ["Kubernetes", "Terraform", "Docker"]
+          example:
+            - Kubernetes
+            - Terraform
+            - Docker
         recommended_paths:
           type: array
           description: 推荐学习路径
@@ -2477,12 +2763,14 @@ components:
           description: 相关文章ID列表
           items:
             type: integer
-          example: [1, 2, 3]
+          example:
+            - 1
+            - 2
+            - 3
         advice_summary:
           type: string
           description: 建议总结
           example: 建议向系统架构和技术管理方向发展，加强业务理解能力
-
     ProfessionMarketData:
       type: object
       description: 职业市场数据
@@ -2490,7 +2778,10 @@ components:
         market_trend:
           type: string
           description: 市场趋势
-          enum: [growing, stable, declining]
+          enum:
+            - growing
+            - stable
+            - declining
           example: growing
         market_trend_description:
           type: string
@@ -2499,7 +2790,10 @@ components:
         salary_impact:
           type: string
           description: 薪资影响
-          enum: [positive, neutral, negative]
+          enum:
+            - positive
+            - neutral
+            - negative
           example: positive
         salary_change_rate:
           type: number
@@ -2529,7 +2823,6 @@ components:
           format: date
           description: 数据更新日期
           example: '2026-04-01'
-
     ProfessionDetail:
       type: object
       description: 职业详细信息
@@ -2553,7 +2846,6 @@ components:
               format: date-time
               description: 更新时间
               example: '2026-04-08T10:00:00Z'
-
     ProfessionListResponse:
       type: object
       description: 职业列表响应
@@ -2586,7 +2878,6 @@ components:
               type: integer
               description: 每页数量
               example: 12
-
     ProfessionDetailResponse:
       type: object
       description: 职业详情响应
@@ -2601,9 +2892,6 @@ components:
           example: success
         data:
           $ref: '#/components/schemas/ProfessionDetail'
-
-    # ============ 学习路径相关模型 ============
-
     LearningPath:
       type: object
       description: 学习路径
@@ -2623,7 +2911,7 @@ components:
         icon:
           type: string
           description: Emoji 图标
-          example: "🐍"
+          example: 🐍
         description:
           type: string
           description: 学习路径描述
@@ -2631,7 +2919,10 @@ components:
         difficulty:
           type: string
           description: 难度等级
-          enum: [beginner, intermediate, advanced]
+          enum:
+            - beginner
+            - intermediate
+            - advanced
           example: beginner
         level_label:
           type: string
@@ -2661,7 +2952,6 @@ components:
           type: boolean
           description: 是否推荐
           example: true
-
     LearningPathDetail:
       type: object
       description: 学习路径详情（包含章节）
@@ -2674,24 +2964,27 @@ components:
               items:
                 type: string
               description: 学习目标
-              example: ["掌握 Python 基础语法", "理解面向对象编程"]
+              example:
+                - 掌握 Python 基础语法
+                - 理解面向对象编程
             target_audience:
               type: array
               items:
                 type: string
               description: 目标受众
-              example: ["编程初学者", "转行开发者"]
+              example:
+                - 编程初学者
+                - 转行开发者
             published_at:
               type: string
               format: date-time
               description: 发布时间
-              example: "2026-01-01T00:00:00Z"
+              example: '2026-01-01T00:00:00Z'
             chapters:
               type: array
               items:
                 $ref: '#/components/schemas/PathChapter'
               description: 章节列表
-
     PathChapter:
       type: object
       description: 学习路径章节
@@ -2719,7 +3012,10 @@ components:
         content_type:
           type: string
           description: 内容类型
-          enum: [article, video, exercise]
+          enum:
+            - article
+            - video
+            - exercise
           example: article
         estimated_hours:
           type: number
@@ -2733,7 +3029,6 @@ components:
           type: boolean
           description: 是否免费
           example: true
-
     PathChapterDetail:
       type: object
       description: 章节详情（包含完整内容）
@@ -2744,11 +3039,11 @@ components:
             content:
               type: string
               description: 章节内容
-              example: "文章内容..."
+              example: 文章内容...
             video_url:
               type: string
               description: 视频 URL
-              example: ""
+              example: ''
             external_links:
               type: array
               items:
@@ -2760,7 +3055,6 @@ components:
                     type: string
               description: 外部链接列表
               example: []
-
     ChapterDetailWithNav:
       type: object
       description: 章节详情（包含前后章节导航）
@@ -2780,13 +3074,13 @@ components:
               example: 1
             title:
               type: string
-              example: "前置章节"
+              example: 前置章节
             slug:
               type: string
-              example: "prev-chapter"
+              example: prev-chapter
             description:
               type: string
-              example: "前一章描述"
+              example: 前一章描述
             content_type:
               type: string
               example: article
@@ -2812,13 +3106,13 @@ components:
               example: 1
             title:
               type: string
-              example: "数据类型与变量"
+              example: 数据类型与变量
             slug:
               type: string
-              example: "data-types"
+              example: data-types
             description:
               type: string
-              example: "学习 Python 的数据类型"
+              example: 学习 Python 的数据类型
             content_type:
               type: string
               example: article
@@ -2831,7 +3125,6 @@ components:
             is_free:
               type: boolean
               example: true
-
     LevelInfo:
       type: object
       description: 难度等级信息
@@ -2843,7 +3136,10 @@ components:
         level:
           type: string
           description: 难度等级
-          enum: [beginner, intermediate, advanced]
+          enum:
+            - beginner
+            - intermediate
+            - advanced
           example: beginner
         name:
           type: string
@@ -2852,7 +3148,7 @@ components:
         icon:
           type: string
           description: Emoji 图标
-          example: "🌱"
+          example: 🌱
         description:
           type: string
           description: 等级描述
@@ -2860,7 +3156,7 @@ components:
         color:
           type: string
           description: 显示颜色
-          example: "#4ade80"
+          example: '#4ade80'
         min_hours:
           type: integer
           description: 最少学习小时数
@@ -2869,7 +3165,6 @@ components:
           type: integer
           description: 最多学习小时数
           example: 40
-
     LearningProgress:
       type: object
       description: 学习进度
@@ -2893,7 +3188,9 @@ components:
         status:
           type: string
           description: 进度状态
-          enum: [in_progress, completed]
+          enum:
+            - in_progress
+            - completed
           example: in_progress
         time_spent:
           type: integer
@@ -2907,13 +3204,12 @@ components:
           type: string
           format: date-time
           description: 创建时间
-          example: "2026-03-01T10:00:00Z"
+          example: '2026-03-01T10:00:00Z'
         updated_at:
           type: string
           format: date-time
           description: 更新时间
-          example: "2026-03-08T15:30:00Z"
-
+          example: '2026-03-08T15:30:00Z'
     SaveProgressRequest:
       type: object
       description: 保存学习进度请求
@@ -2942,7 +3238,9 @@ components:
         status:
           type: string
           description: 进度状态
-          enum: [in_progress, completed]
+          enum:
+            - in_progress
+            - completed
           example: completed
         time_spent:
           type: integer
@@ -2952,7 +3250,6 @@ components:
           type: string
           description: 学习笔记
           example: 这一章讲得很好
-
     LearningDashboard:
       type: object
       description: 学习路径仪表盘
@@ -2969,10 +3266,10 @@ components:
                 example: 1
               title:
                 type: string
-                example: "Python 基础语法"
+                example: Python 基础语法
               slug:
                 type: string
-                example: "basic-syntax"
+                example: basic-syntax
               order_index:
                 type: integer
                 example: 1
@@ -2982,7 +3279,9 @@ components:
           items:
             type: integer
           description: 已完成章节 ID 列表
-          example: [1, 2]
+          example:
+            - 1
+            - 2
         progress:
           type: object
           description: 进度信息
@@ -3000,8 +3299,183 @@ components:
               format: float
               description: 完成百分比
               example: 16.67
-
-# ============ 工具库 Schema ============
+    AdminCreateLearningPathRequest:
+      type: object
+      description: 管理后台创建学习路径请求
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          description: 标题
+        icon:
+          type: string
+          description: 图标
+        description:
+          type: string
+          description: 描述
+        difficulty:
+          type: string
+          enum:
+            - beginner
+            - intermediate
+            - advanced
+          description: 难度等级
+        level_label:
+          type: string
+          description: 难度标签
+        learning_goals:
+          type: array
+          items:
+            type: string
+          description: 学习目标
+        target_audience:
+          type: array
+          items:
+            type: string
+          description: 目标受众
+        estimated_days:
+          type: integer
+          description: 预计天数
+        estimated_hours:
+          type: integer
+          description: 预计小时数
+        cover_image:
+          type: string
+          description: 封面图片 URL
+        is_featured:
+          type: boolean
+          description: 是否推荐
+    AdminUpdateLearningPathRequest:
+      type: object
+      description: 管理后台更新学习路径请求
+      properties:
+        title:
+          type: string
+          description: 标题
+        icon:
+          type: string
+          description: 图标
+        description:
+          type: string
+          description: 描述
+        difficulty:
+          type: string
+          enum:
+            - beginner
+            - intermediate
+            - advanced
+          description: 难度等级
+        level_label:
+          type: string
+          description: 难度标签
+        learning_goals:
+          type: array
+          items:
+            type: string
+          description: 学习目标
+        target_audience:
+          type: array
+          items:
+            type: string
+          description: 目标受众
+        estimated_days:
+          type: integer
+          description: 预计天数
+        estimated_hours:
+          type: integer
+          description: 预计小时数
+        cover_image:
+          type: string
+          description: 封面图片 URL
+        is_featured:
+          type: boolean
+          description: 是否推荐
+        sort_order:
+          type: integer
+          description: 排序顺序
+    AdminCreateChapterRequest:
+      type: object
+      description: 管理后台创建章节请求
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          description: 章节标题
+        description:
+          type: string
+          description: 章节描述
+        content_type:
+          type: string
+          enum:
+            - article
+            - video
+            - exercise
+          description: 内容类型
+        content:
+          type: string
+          description: 章节内容
+        video_url:
+          type: string
+          description: 视频 URL
+        external_links:
+          type: array
+          description: 外部链接
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              url:
+                type: string
+        estimated_hours:
+          type: number
+          description: 预计学习小时数
+        is_free:
+          type: boolean
+          description: 是否免费
+    AdminUpdateChapterRequest:
+      type: object
+      description: 管理后台更新章节请求
+      properties:
+        title:
+          type: string
+          description: 章节标题
+        description:
+          type: string
+          description: 章节描述
+        content_type:
+          type: string
+          enum:
+            - article
+            - video
+            - exercise
+          description: 内容类型
+        content:
+          type: string
+          description: 章节内容
+        video_url:
+          type: string
+          description: 视频 URL
+        external_links:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              url:
+                type: string
+        estimated_hours:
+          type: number
+          description: 预计学习小时数
+        order_index:
+          type: integer
+          description: 排序索引
+        is_free:
+          type: boolean
+          description: 是否免费
 ToolCategoriesResponse:
   type: object
   description: 工具类别列表响应
@@ -3011,12 +3485,11 @@ ToolCategoriesResponse:
       example: 0
     message:
       type: string
-      example: "success"
+      example: success
     data:
       type: array
       items:
         $ref: '#/components/schemas/ToolCategory'
-
 ToolCategory:
   type: object
   properties:
@@ -3027,19 +3500,19 @@ ToolCategory:
     name:
       type: string
       description: 类别名称
-      example: "写作类"
+      example: 写作类
     slug:
       type: string
       description: URL友好的标识
-      example: "writing"
+      example: writing
     icon:
       type: string
       description: 图标
-      example: "✍️"
+      example: ✍️
     description:
       type: string
       description: 类别描述
-      example: "用于写作、文案创作的 AI 工具"
+      example: 用于写作、文案创作的 AI 工具
     sort_order:
       type: integer
       description: 排序顺序
@@ -3056,13 +3529,12 @@ ToolCategory:
       type: string
       format: date-time
       description: 创建时间
-      example: "2026-04-11T00:00:00Z"
+      example: '2026-04-11T00:00:00Z'
     updated_at:
       type: string
       format: date-time
       description: 更新时间
-      example: "2026-04-11T00:00:00Z"
-
+      example: '2026-04-11T00:00:00Z'
 ToolsResponse:
   type: object
   description: 工具列表响应
@@ -3072,7 +3544,7 @@ ToolsResponse:
       example: 0
     message:
       type: string
-      example: "success"
+      example: success
     data:
       type: object
       properties:
@@ -3092,7 +3564,6 @@ ToolsResponse:
           type: integer
           description: 每页数量
           example: 20
-
 ToolResponse:
   type: object
   properties:
@@ -3103,35 +3574,35 @@ ToolResponse:
     name:
       type: string
       description: 工具名称
-      example: "ChatGPT"
+      example: ChatGPT
     slug:
       type: string
       description: URL友好的标识
-      example: "chatgpt"
+      example: chatgpt
     icon:
       type: string
       description: 工具图标
-      example: "🤖"
+      example: 🤖
     description:
       type: string
       description: 工具描述
-      example: "OpenAI 开发的大型语言模型"
+      example: OpenAI 开发的大型语言模型
     official_url:
       type: string
       description: 官方网站
-      example: "https://chat.openai.com"
+      example: https://chat.openai.com
     documentation_url:
       type: string
       description: 文档链接
-      example: "https://help.openai.com"
+      example: https://help.openai.com
     pricing:
       type: string
       description: 定价信息（JSON）
-      example: "{\"free\":{\"available\":true,\"limit\":\"每天消息限额\"}}"
+      example: '{"free":{"available":true,"limit":"每天消息限额"}}'
     pricing_description:
       type: string
       description: 定价说明
-      example: "免费版每天有消息配额，Plus 版本 $20/月"
+      example: 免费版每天有消息配额，Plus 版本 $20/月
     category_id:
       type: integer
       description: 所属类别ID
@@ -3139,7 +3610,7 @@ ToolResponse:
     difficulty:
       type: string
       description: 难度等级
-      example: "beginner"
+      example: beginner
     rating:
       type: number
       format: float
@@ -3160,7 +3631,7 @@ ToolResponse:
     tags:
       type: string
       description: 标签列表（JSON）
-      example: "[1,2,3,7]"
+      example: '[1,2,3,7]'
     featured:
       type: boolean
       description: 是否精选
@@ -3173,18 +3644,16 @@ ToolResponse:
       type: string
       format: date-time
       description: 创建时间
-      example: "2026-04-11T00:00:00Z"
+      example: '2026-04-11T00:00:00Z'
     updated_at:
       type: string
       format: date-time
       description: 更新时间
-      example: "2026-04-11T00:00:00Z"
-
-# ============ 全局错误响应 ============
+      example: '2026-04-11T00:00:00Z'
 x-error-codes:
-  200: 请求成功
-  400: 请求参数错误
-  401: 未授权或认证失败
-  403: 权限不足
-  404: 资源不存在
-  500: 服务器内部错误
+  '200': 请求成功
+  '400': 请求参数错误
+  '401': 未授权或认证失败
+  '403': 权限不足
+  '404': 资源不存在
+  '500': 服务器内部错误

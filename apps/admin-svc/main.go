@@ -64,7 +64,7 @@ func main() {
 	learningPathRepo := repository.NewLearningPathRepository()
 
 	// 初始化服务层
-	learningPathService := service.NewLearningPathService(learningPathRepo)
+	learningPathService := service.NewAdminService(learningPathRepo)
 
 	// 注册路由
 	registerRoutes(server, learningPathService)
@@ -74,7 +74,7 @@ func main() {
 }
 
 // registerRoutes 注册路由
-func registerRoutes(server *rest.Server, learningPathService *service.LearningPathService) {
+func registerRoutes(server *rest.Server, learningPathService *service.AdminService) {
 	// 创建处理器
 	learningPathHandler := handler.NewLearningPathHandler(learningPathService)
 

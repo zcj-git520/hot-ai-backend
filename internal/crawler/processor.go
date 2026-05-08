@@ -14,7 +14,7 @@ import (
 
 // ProcessAndStoreArticle 处理并存储文章到数据库
 // isRSS: 是否为 RSS 源，RSS 源跳过内容清洗和标题提取
-func ProcessAndStoreArticle(ctx context.Context, article models.Article, db *gorm.DB, isRSS bool, translateClient *TranslateClient, aiArticleClient *AIArticleClient) error {
+func ProcessAndStoreArticle(ctx context.Context, article models.Article, db *gorm.DB, isRSS bool, aiClient *AIClient) error {
 	logx.Infof("处理文章内容: %v (RSS: %v)", article.Title, isRSS)
 
 	// 1. 检查必要字段
@@ -35,15 +35,13 @@ func ProcessAndStoreArticle(ctx context.Context, article models.Article, db *gor
 
 	// 3. AI文章分析（优先进行，判断是否AI相关）
 	var aiResult *AIArticleResponse
-	if aiArticleClient != nil {
-		result, shouldSkip, err := aiArticleClient.AnalyzeArticleAndSkip(ctx, article.Title, article.Content)
-		if err != nil {
-			logx.Errorf("AI文章分析失败: %v", err)
-		} else if shouldSkip {
-			// 非AI相关文章，跳过（不翻译、不存储）
-			logx.Infof("非AI相关文章，跳过: %s", article.Title)
-			return nil
-		}
+	if aiClient != nil {
+		result, _, _ := aiClient.AnalyzeArticleAndSkip(ctx, article.Title, article.Content)
+		//if err != nil {
+		//	// 非AI相关文章，跳过（不翻译、不存储）
+		//	logx.Infof("非AI相关文章，跳过: %s", article.Title)
+		//	return nil
+		//}
 		aiResult = result
 
 		// 使用AI分析结果补充文章信息
@@ -56,8 +54,8 @@ func ProcessAndStoreArticle(ctx context.Context, article models.Article, db *gor
 	}
 
 	// 4. 仅对AI相关文章进行翻译
-	if translateClient != nil && aiResult != nil {
-		err := translateClient.TranslateArticle(ctx, &article)
+	if aiClient != nil && aiResult != nil {
+		err := aiClient.TranslateArticle(ctx, &article)
 		if err != nil {
 			logx.Errorf("翻译文章失败: %v", err)
 		}
@@ -115,7 +113,6 @@ func ProcessAndStoreArticle(ctx context.Context, article models.Article, db *gor
 	if article.Summary == "" {
 		article.Summary = truncateString(article.Content, 200)
 	}
-	article.SummaryEn = truncateString(article.ContentEn, 200)
 	article.SourceID = source.ID
 	if article.CategoryID == 0 {
 		article.CategoryID = 1 // 默认分类
@@ -172,6 +169,11 @@ func cleanContent(content string) string {
 		return ""
 	}
 
+	// 0. 检测微信文章占位符并替换
+	if isWechatPlaceholder(content) {
+		return "当前微信文章抓取受反爬机制影响，无法获取正文，请查看原文查看"
+	}
+
 	// 1. 解码 HTML 实体
 	content = html.UnescapeString(content)
 
@@ -186,6 +188,57 @@ func cleanContent(content string) string {
 	content = strings.TrimSpace(content)
 
 	return content
+}
+
+// isWechatPlaceholder 检测微信文章占位符内容
+func isWechatPlaceholder(content string) bool {
+	// 检测常见的微信文章抓取失败占位符模式
+	placeholderPatterns := []string{
+		"视频 小程序 赞，轻点两下取消赞",
+		"在看，轻点两下取消在看",
+		"[图片]",
+		"请点击此处输入图片说明",
+		"当前文档由",
+		"长按识别",
+		"src=\"mmbiz",
+		"data-src=\"mmbiz",
+	}
+
+	// 检测微信文章UI元素文本（残缺内容）
+	wechatUIPatterns := []string{
+		"赞，轻点两下取消赞",
+		"在看，轻点两下取消在看",
+		"轻点两下",
+		"小程序",
+	}
+	wechatUICount := 0
+	for _, pattern := range wechatUIPatterns {
+		if strings.Contains(content, pattern) {
+			wechatUICount++
+		}
+	}
+	// 如果包含多个微信UI元素，基本可以判定为残缺内容
+	if wechatUICount >= 2 {
+		return true
+	}
+
+	for _, pattern := range placeholderPatterns {
+		if strings.Contains(content, pattern) {
+			return true
+		}
+	}
+
+	// 检测是否包含典型的微信素材标识（如 mmbiz.qpic.cn）
+	if strings.Contains(content, "mmbiz.qpic.cn") || strings.Contains(content, "mmbizurl") {
+		return true
+	}
+
+	// 检测内容是否过短且包含"查看原文"等提示
+	if strings.Contains(content, "查看原文") && len(content) < 200 {
+		return true
+	}
+
+	return false
 }
 
 // extractTitle 从内容中提取标题

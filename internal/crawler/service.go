@@ -99,22 +99,22 @@ func StartCrawlerService(ctx context.Context, c CrawlerConf) {
 		logx.Info("Miniflux 未启用，将使用传统爬虫模式")
 	}
 
-	// 3. 初始化 AI Server 客户端（用于翻译等功能）
-	var translateClient *TranslateClient
+// 3. 初始化 AI Server 客户端（统一客户端）
+	var aiClient *AIClient
 	if c.AIServer.Enabled && c.AIServer.BaseURL != "" {
-		translateClient = NewTranslateClient(c.AIServer.BaseURL)
+		aiClient = NewAIClient(c.AIServer.BaseURL)
 		if c.AIServer.Model != "" {
-			translateClient.model = c.AIServer.Model
+			aiClient.SetModel(c.AIServer.Model)
 		}
-		logx.Infof("AI Server 客户端初始化成功: %s (模型: %s)", c.AIServer.BaseURL, translateClient.model)
+		logx.Infof("AI 客户端初始化成功: %s (模型: %s)", c.AIServer.BaseURL, aiClient.model)
 	} else {
-		logx.Info("AI Server 服务未启用，文章将不会被翻译")
+		logx.Info("AI Server 服务未启用")
 	}
 
 	// 4. 启动定时任务调度器
-	go StartScheduler(ctx, c, db, minifluxClient, translateClient)
+	go StartScheduler(ctx, c, db, minifluxClient, aiClient)
 
-	logx.Info("采集服务启动完成（支持 RSS + 传统爬虫）")
+	logx.Info("采集服务启动完成（支持 RSS + 传统爬虫 + AI 分析）")
 }
 
 // InitLog 初始化日志配置

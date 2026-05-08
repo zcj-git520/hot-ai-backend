@@ -64,7 +64,7 @@ type Article struct {
 	ContentMongoID string    `gorm:"column:content_mongo_id;type:varchar(50);uniqueIndex:uk_content_mongo_id" json:"content_mongo_id,omitempty"`
 	OriginalURL    string    `gorm:"column:original_url;type:varchar(500)" json:"original_url,omitempty"`
 	SourceID       uint      `gorm:"column:source_id;not null;index:idx_source_id" json:"source_id"`
-	Author         string    `gorm:"column:author;type:varchar(50)" json:"author,omitempty"`
+	Author         string    `gorm:"column:author;type:varchar(255)" json:"author,omitempty"`
 	CategoryID     uint      `gorm:"column:category_id;not null;index:idx_category_id" json:"category_id"`
 	PublishedAt    time.Time `gorm:"column:published_at;not null;index:idx_published_at" json:"published_at"`
 	Status         int       `gorm:"column:status;default:1;index:idx_status" json:"status"` // 0-待审核, 1-已发布, 2-已删除

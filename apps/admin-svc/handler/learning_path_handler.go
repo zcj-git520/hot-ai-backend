@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"hot-ai-backend/apps/admin-svc/internal/logic"
+	"hot-ai-backend/internal/service"
 	"hot-ai-backend/internal/types"
 
 	"github.com/zeromicro/go-zero/rest/httpx"
@@ -13,14 +13,12 @@ import (
 
 // LearningPathHandler 学习路径管理处理器
 type LearningPathHandler struct {
-	learningPathLogic *logic.LearningPathLogic
+	svc *service.AdminService
 }
 
 // NewLearningPathHandler 创建学习路径处理器实例
-func NewLearningPathHandler() *LearningPathHandler {
-	return &LearningPathHandler{
-		learningPathLogic: logic.NewLearningPathLogic(),
-	}
+func NewLearningPathHandler(svc *service.AdminService) *LearningPathHandler {
+	return &LearningPathHandler{svc: svc}
 }
 
 // GetLearningPaths 获取学习路径列表
@@ -51,7 +49,7 @@ func (h *LearningPathHandler) GetLearningPaths(w http.ResponseWriter, r *http.Re
 		}
 	}
 
-	req := &logic.GetLearningPathsRequest{
+	req := &service.AdminGetLearningPathsRequest{
 		Page:       page,
 		PageSize:   pageSize,
 		Difficulty: difficulty,
@@ -59,7 +57,7 @@ func (h *LearningPathHandler) GetLearningPaths(w http.ResponseWriter, r *http.Re
 		Status:     status,
 	}
 
-	paths, total, err := h.learningPathLogic.GetLearningPaths(req)
+	paths, total, err := h.svc.GetLearningPaths(req)
 	if err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
@@ -87,7 +85,7 @@ func (h *LearningPathHandler) GetLearningPathByID(w http.ResponseWriter, r *http
 		return
 	}
 
-	path, err := h.learningPathLogic.GetLearningPathByID(uint(id))
+	path, err := h.svc.GetLearningPathByID(uint(id))
 	if err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
@@ -98,13 +96,12 @@ func (h *LearningPathHandler) GetLearningPathByID(w http.ResponseWriter, r *http
 
 // CreateLearningPath 创建学习路径
 func (h *LearningPathHandler) CreateLearningPath(w http.ResponseWriter, r *http.Request) {
-	var req logic.CreateLearningPathRequest
+	var req service.CreateLearningPathRequest
 	if err := httpx.ParseJsonBody(r, &req); err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
 	}
 
-	// 验证必填字段
 	if req.Title == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("标题不能为空"))
 		return
@@ -116,7 +113,7 @@ func (h *LearningPathHandler) CreateLearningPath(w http.ResponseWriter, r *http.
 		req.LevelLabel = "入门"
 	}
 
-	path, err := h.learningPathLogic.CreateLearningPath(&req)
+	path, err := h.svc.CreateLearningPath(&req)
 	if err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
@@ -139,13 +136,13 @@ func (h *LearningPathHandler) UpdateLearningPath(w http.ResponseWriter, r *http.
 		return
 	}
 
-	var req logic.UpdateLearningPathRequest
+	var req service.UpdateLearningPathRequest
 	if err := httpx.ParseJsonBody(r, &req); err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
 	}
 
-	path, err := h.learningPathLogic.UpdateLearningPath(uint(id), &req)
+	path, err := h.svc.UpdateLearningPath(uint(id), &req)
 	if err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
@@ -168,7 +165,7 @@ func (h *LearningPathHandler) DeleteLearningPath(w http.ResponseWriter, r *http.
 		return
 	}
 
-	if err := h.learningPathLogic.DeleteLearningPath(uint(id)); err != nil {
+	if err := h.svc.DeleteLearningPath(uint(id)); err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
 	}
@@ -193,7 +190,7 @@ func (h *LearningPathHandler) GetChapters(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	chapters, err := h.learningPathLogic.GetChapters(uint(pathID))
+	chapters, err := h.svc.GetChapters(uint(pathID))
 	if err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
@@ -216,7 +213,7 @@ func (h *LearningPathHandler) GetChapterByID(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	chapter, err := h.learningPathLogic.GetChapterByID(uint(id))
+	chapter, err := h.svc.GetChapterByID(uint(id))
 	if err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
@@ -239,7 +236,7 @@ func (h *LearningPathHandler) CreateChapter(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var req logic.CreateChapterRequest
+	var req service.CreateChapterRequest
 	if err := httpx.ParseJsonBody(r, &req); err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
@@ -253,7 +250,7 @@ func (h *LearningPathHandler) CreateChapter(w http.ResponseWriter, r *http.Reque
 		req.ContentType = "article"
 	}
 
-	chapter, err := h.learningPathLogic.CreateChapter(uint(pathID), &req)
+	chapter, err := h.svc.CreateChapter(uint(pathID), &req)
 	if err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
@@ -276,13 +273,13 @@ func (h *LearningPathHandler) UpdateChapter(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var req logic.UpdateChapterRequest
+	var req service.UpdateChapterRequest
 	if err := httpx.ParseJsonBody(r, &req); err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
 	}
 
-	chapter, err := h.learningPathLogic.UpdateChapter(uint(id), &req)
+	chapter, err := h.svc.UpdateChapter(uint(id), &req)
 	if err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
@@ -305,7 +302,7 @@ func (h *LearningPathHandler) DeleteChapter(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if err := h.learningPathLogic.DeleteChapter(uint(id)); err != nil {
+	if err := h.svc.DeleteChapter(uint(id)); err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
 	}
@@ -330,7 +327,7 @@ func (h *LearningPathHandler) PublishLearningPath(w http.ResponseWriter, r *http
 		return
 	}
 
-	if err := h.learningPathLogic.PublishLearningPath(uint(id)); err != nil {
+	if err := h.svc.PublishLearningPath(uint(id)); err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
 	}
@@ -355,7 +352,7 @@ func (h *LearningPathHandler) UnpublishLearningPath(w http.ResponseWriter, r *ht
 		return
 	}
 
-	if err := h.learningPathLogic.UnpublishLearningPath(uint(id)); err != nil {
+	if err := h.svc.UnpublishLearningPath(uint(id)); err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
 	}
@@ -388,7 +385,7 @@ func (h *LearningPathHandler) SetFeatured(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := h.learningPathLogic.SetFeatured(uint(id), req.Featured); err != nil {
+	if err := h.svc.SetFeatured(uint(id), req.Featured); err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
 	}
