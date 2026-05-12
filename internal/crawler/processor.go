@@ -32,16 +32,13 @@ func ProcessAndStoreArticle(ctx context.Context, article models.Article, db *gor
 			return nil
 		}
 	}
-
+	if isWechatPlaceholder(article.Content) {
+		article.Content = "当前微信文章抓取受反爬机制影响，无法获取正文，请查看原文查看"
+	}
 	// 3. AI文章分析（优先进行，判断是否AI相关）
 	var aiResult *AIArticleResponse
 	if aiClient != nil {
 		result, _, _ := aiClient.AnalyzeArticleAndSkip(ctx, article.Title, article.Content)
-		//if err != nil {
-		//	// 非AI相关文章，跳过（不翻译、不存储）
-		//	logx.Infof("非AI相关文章，跳过: %s", article.Title)
-		//	return nil
-		//}
 		aiResult = result
 
 		// 使用AI分析结果补充文章信息

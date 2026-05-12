@@ -577,7 +577,7 @@ func fetchArticlesFromMinifluxFeed(ctx context.Context, client *MinifluxClient, 
 		articleModel := models.Article{
 			Title:        entry.Title,
 			Content:      fullEntry,
-			Summary:      entry.Content,
+			Summary:      truncateString(entry.Content, 200),
 			Author:       entry.Author,
 			PublishedAt:  publishedAt,
 			OriginalURL:  entry.URL,
