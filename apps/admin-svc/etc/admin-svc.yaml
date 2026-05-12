@@ -1,6 +1,6 @@
 Name: admin-svc
 Host: 0.0.0.0
-Port: 8006
+Port: 8005
 DataSource:
   MySQL:
     DSN: root:shds@Admin123@tcp(192.168.50.109:13306)/hot_ai?charset=utf8mb4&parseTime=true&loc=Local

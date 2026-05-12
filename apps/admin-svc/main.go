@@ -6,21 +6,20 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/zeromicro/go-zero/core/conf"
-	"github.com/zeromicro/go-zero/rest"
-
+	"hot-ai-backend/apps/admin-svc/handler"
 	"hot-ai-backend/internal/database"
 	"hot-ai-backend/internal/repository"
 	"hot-ai-backend/internal/service"
-	"hot-ai-backend/apps/admin-svc/handler"
+
+	"github.com/zeromicro/go-zero/core/conf"
+	"github.com/zeromicro/go-zero/rest"
 )
 
 var configFile = flag.String("f", "apps/admin-svc/etc/admin-svc.yaml", "the config file")
 
-// AdminSvcConf 管理后台服务配置
+// AdminSvcConf admin 服务配置
 type AdminSvcConf struct {
 	rest.RestConf
-	// 数据库配置
 	DataSource struct {
 		MySQL struct {
 			DSN string `json:",optional"`
@@ -51,9 +50,6 @@ func main() {
 		}
 
 		fmt.Println("Database initialized successfully")
-	} else {
-		fmt.Fprintf(os.Stderr, "[错误] 未配置数据库\n")
-		os.Exit(1)
 	}
 
 	// 创建服务器
@@ -64,111 +60,115 @@ func main() {
 	learningPathRepo := repository.NewLearningPathRepository()
 
 	// 初始化服务层
-	learningPathService := service.NewAdminService(learningPathRepo)
+	adminService := service.NewAdminService(learningPathRepo)
 
 	// 注册路由
-	registerRoutes(server, learningPathService)
+	registerRoutes(server, adminService)
 
 	fmt.Printf("Starting admin-svc at %s:%d...\n", c.Host, c.Port)
 	server.Start()
 }
 
-// registerRoutes 注册路由
-func registerRoutes(server *rest.Server, learningPathService *service.AdminService) {
-	// 创建处理器
-	learningPathHandler := handler.NewLearningPathHandler(learningPathService)
+func registerRoutes(server *rest.Server, adminService *service.AdminService) {
+	learningPathHandler := handler.NewAdminLearningPathHandler(adminService)
+	chapterHandler := handler.NewAdminChapterHandler(adminService)
 
-	// ===== 学习路径管理路由 =====
-	// 获取学习路径列表（管理后台）
+	// ===== 学习路径管理 =====
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
-		Path:    "/api/admin/learning-paths",
+		Path:    "/admin/learning-paths",
 		Handler: learningPathHandler.GetLearningPaths,
 	})
 
-	// 获取学习路径详情
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
-		Path:    "/api/admin/learning-paths/:id",
+		Path:    "/admin/learning-paths/:id",
 		Handler: learningPathHandler.GetLearningPathByID,
 	})
 
-	// 创建学习路径
 	server.AddRoute(rest.Route{
 		Method:  http.MethodPost,
-		Path:    "/api/admin/learning-paths",
+		Path:    "/admin/learning-paths",
 		Handler: learningPathHandler.CreateLearningPath,
 	})
 
-	// 更新学习路径
 	server.AddRoute(rest.Route{
 		Method:  http.MethodPut,
-		Path:    "/api/admin/learning-paths/:id",
+		Path:    "/admin/learning-paths/:id",
 		Handler: learningPathHandler.UpdateLearningPath,
 	})
 
-	// 删除学习路径
 	server.AddRoute(rest.Route{
 		Method:  http.MethodDelete,
-		Path:    "/api/admin/learning-paths/:id",
+		Path:    "/admin/learning-paths/:id",
 		Handler: learningPathHandler.DeleteLearningPath,
 	})
 
-	// ===== 章节管理路由 =====
-	// 获取章节列表
-	server.AddRoute(rest.Route{
-		Method:  http.MethodGet,
-		Path:    "/api/admin/learning-paths/:path_id/chapters",
-		Handler: learningPathHandler.GetChapters,
-	})
-
-	// 获取章节详情
-	server.AddRoute(rest.Route{
-		Method:  http.MethodGet,
-		Path:    "/api/admin/chapters/:id",
-		Handler: learningPathHandler.GetChapterByID,
-	})
-
-	// 创建章节
+	// ===== 审核流程 =====
 	server.AddRoute(rest.Route{
 		Method:  http.MethodPost,
-		Path:    "/api/admin/learning-paths/:path_id/chapters",
-		Handler: learningPathHandler.CreateChapter,
+		Path:    "/admin/learning-paths/:id/submit-review",
+		Handler: learningPathHandler.SubmitReview,
 	})
 
-	// 更新章节
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPost,
+		Path:    "/admin/learning-paths/:id/approve",
+		Handler: learningPathHandler.Approve,
+	})
+
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPost,
+		Path:    "/admin/learning-paths/:id/reject",
+		Handler: learningPathHandler.Reject,
+	})
+
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPost,
+		Path:    "/admin/learning-paths/:id/publish",
+		Handler: learningPathHandler.Publish,
+	})
+
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPost,
+		Path:    "/admin/learning-paths/:id/unpublish",
+		Handler: learningPathHandler.Unpublish,
+	})
+
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPost,
+		Path:    "/admin/learning-paths/:id/feature",
+		Handler: learningPathHandler.SetFeatured,
+	})
+
+	// ===== 章节管理 =====
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/admin/learning-paths/:path_id/chapters",
+		Handler: chapterHandler.GetChapters,
+	})
+
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPost,
+		Path:    "/admin/learning-paths/:path_id/chapters",
+		Handler: chapterHandler.CreateChapter,
+	})
+
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/admin/chapters/:id",
+		Handler: chapterHandler.GetChapterByID,
+	})
+
 	server.AddRoute(rest.Route{
 		Method:  http.MethodPut,
-		Path:    "/api/admin/chapters/:id",
-		Handler: learningPathHandler.UpdateChapter,
+		Path:    "/admin/chapters/:id",
+		Handler: chapterHandler.UpdateChapter,
 	})
 
-	// 删除章节
 	server.AddRoute(rest.Route{
 		Method:  http.MethodDelete,
-		Path:    "/api/admin/chapters/:id",
-		Handler: learningPathHandler.DeleteChapter,
-	})
-
-	// ===== 学习路径操作 =====
-	// 发布学习路径
-	server.AddRoute(rest.Route{
-		Method:  http.MethodPost,
-		Path:    "/api/admin/learning-paths/:id/publish",
-		Handler: learningPathHandler.PublishLearningPath,
-	})
-
-	// 下架学习路径
-	server.AddRoute(rest.Route{
-		Method:  http.MethodPost,
-		Path:    "/api/admin/learning-paths/:id/unpublish",
-		Handler: learningPathHandler.UnpublishLearningPath,
-	})
-
-	// 设置推荐
-	server.AddRoute(rest.Route{
-		Method:  http.MethodPost,
-		Path:    "/api/admin/learning-paths/:id/featured",
-		Handler: learningPathHandler.SetFeatured,
+		Path:    "/admin/chapters/:id",
+		Handler: chapterHandler.DeleteChapter,
 	})
 }

@@ -206,6 +206,55 @@ func (s *AdminService) SetFeatured(id uint, featured bool) error {
 	return nil
 }
 
+// SubmitReview 提交审核
+func (s *AdminService) SubmitReview(id uint) error {
+	result := database.GetDB().Model(&models.LearningPath{}).Where("id = ?", id).Update("status", 3)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("学习路径不存在")
+	}
+	return nil
+}
+
+// Approve 审核通过
+func (s *AdminService) Approve(id uint) error {
+	result := database.GetDB().Model(&models.LearningPath{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"status":       1,
+		"is_active":    1,
+		"published_at": database.GetDB().NowFunc(),
+	})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("学习路径不存在")
+	}
+	return nil
+}
+
+// Reject 审核拒绝
+func (s *AdminService) Reject(id uint, reason string) error {
+	// 先更新学习路径状态为已拒绝
+	result := database.GetDB().Model(&models.LearningPath{}).Where("id = ?", id).Update("status", 2)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("学习路径不存在")
+	}
+
+	// 更新管理表的审核备注
+	database.GetDB().Model(&models.LearningPathManagement{}).
+		Where("path_id = ?", id).
+		Updates(map[string]interface{}{
+			"review_notes": reason,
+		})
+
+	return nil
+}
+
 // GetChapters 获取章节列表
 func (s *AdminService) GetChapters(pathID uint) ([]models.PathChapter, error) {
 	var chapters []models.PathChapter

@@ -11,18 +11,18 @@ import (
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
-// LearningPathHandler 学习路径管理处理器
-type LearningPathHandler struct {
+// AdminLearningPathHandler 管理后台学习路径处理器
+type AdminLearningPathHandler struct {
 	svc *service.AdminService
 }
 
-// NewLearningPathHandler 创建学习路径处理器实例
-func NewLearningPathHandler(svc *service.AdminService) *LearningPathHandler {
-	return &LearningPathHandler{svc: svc}
+// NewAdminLearningPathHandler 创建学习路径处理器实例
+func NewAdminLearningPathHandler(svc *service.AdminService) *AdminLearningPathHandler {
+	return &AdminLearningPathHandler{svc: svc}
 }
 
 // GetLearningPaths 获取学习路径列表
-func (h *LearningPathHandler) GetLearningPaths(w http.ResponseWriter, r *http.Request) {
+func (h *AdminLearningPathHandler) GetLearningPaths(w http.ResponseWriter, r *http.Request) {
 	page := 1
 	pageSize := 20
 
@@ -72,7 +72,7 @@ func (h *LearningPathHandler) GetLearningPaths(w http.ResponseWriter, r *http.Re
 }
 
 // GetLearningPathByID 获取学习路径详情
-func (h *LearningPathHandler) GetLearningPathByID(w http.ResponseWriter, r *http.Request) {
+func (h *AdminLearningPathHandler) GetLearningPathByID(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
@@ -95,7 +95,7 @@ func (h *LearningPathHandler) GetLearningPathByID(w http.ResponseWriter, r *http
 }
 
 // CreateLearningPath 创建学习路径
-func (h *LearningPathHandler) CreateLearningPath(w http.ResponseWriter, r *http.Request) {
+func (h *AdminLearningPathHandler) CreateLearningPath(w http.ResponseWriter, r *http.Request) {
 	var req service.CreateLearningPathRequest
 	if err := httpx.ParseJsonBody(r, &req); err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
@@ -123,7 +123,7 @@ func (h *LearningPathHandler) CreateLearningPath(w http.ResponseWriter, r *http.
 }
 
 // UpdateLearningPath 更新学习路径
-func (h *LearningPathHandler) UpdateLearningPath(w http.ResponseWriter, r *http.Request) {
+func (h *AdminLearningPathHandler) UpdateLearningPath(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
@@ -152,7 +152,7 @@ func (h *LearningPathHandler) UpdateLearningPath(w http.ResponseWriter, r *http.
 }
 
 // DeleteLearningPath 删除学习路径
-func (h *LearningPathHandler) DeleteLearningPath(w http.ResponseWriter, r *http.Request) {
+func (h *AdminLearningPathHandler) DeleteLearningPath(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
@@ -176,145 +176,91 @@ func (h *LearningPathHandler) DeleteLearningPath(w http.ResponseWriter, r *http.
 	}))
 }
 
-// GetChapters 获取章节列表
-func (h *LearningPathHandler) GetChapters(w http.ResponseWriter, r *http.Request) {
-	pathIDStr := r.PathValue("path_id")
-	if pathIDStr == "" {
+// SubmitReview 提交审核
+func (h *AdminLearningPathHandler) SubmitReview(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
 		return
 	}
 
-	pathID, err := strconv.ParseUint(pathIDStr, 10, 32)
+	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("无效的路径ID"))
 		return
 	}
 
-	chapters, err := h.svc.GetChapters(uint(pathID))
-	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, err)
-		return
-	}
-
-	httpx.OkJsonCtx(r.Context(), w, types.Success(chapters))
-}
-
-// GetChapterByID 获取章节详情
-func (h *LearningPathHandler) GetChapterByID(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	if idStr == "" {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少章节ID"))
-		return
-	}
-
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("无效的章节ID"))
-		return
-	}
-
-	chapter, err := h.svc.GetChapterByID(uint(id))
-	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, err)
-		return
-	}
-
-	httpx.OkJsonCtx(r.Context(), w, types.Success(chapter))
-}
-
-// CreateChapter 创建章节
-func (h *LearningPathHandler) CreateChapter(w http.ResponseWriter, r *http.Request) {
-	pathIDStr := r.PathValue("path_id")
-	if pathIDStr == "" {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
-		return
-	}
-
-	pathID, err := strconv.ParseUint(pathIDStr, 10, 32)
-	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("无效的路径ID"))
-		return
-	}
-
-	var req service.CreateChapterRequest
-	if err := httpx.ParseJsonBody(r, &req); err != nil {
-		httpx.ErrorCtx(r.Context(), w, err)
-		return
-	}
-
-	if req.Title == "" {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("章节标题不能为空"))
-		return
-	}
-	if req.ContentType == "" {
-		req.ContentType = "article"
-	}
-
-	chapter, err := h.svc.CreateChapter(uint(pathID), &req)
-	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, err)
-		return
-	}
-
-	httpx.OkJsonCtx(r.Context(), w, types.Success(chapter))
-}
-
-// UpdateChapter 更新章节
-func (h *LearningPathHandler) UpdateChapter(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	if idStr == "" {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少章节ID"))
-		return
-	}
-
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("无效的章节ID"))
-		return
-	}
-
-	var req service.UpdateChapterRequest
-	if err := httpx.ParseJsonBody(r, &req); err != nil {
-		httpx.ErrorCtx(r.Context(), w, err)
-		return
-	}
-
-	chapter, err := h.svc.UpdateChapter(uint(id), &req)
-	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, err)
-		return
-	}
-
-	httpx.OkJsonCtx(r.Context(), w, types.Success(chapter))
-}
-
-// DeleteChapter 删除章节
-func (h *LearningPathHandler) DeleteChapter(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	if idStr == "" {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少章节ID"))
-		return
-	}
-
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("无效的章节ID"))
-		return
-	}
-
-	if err := h.svc.DeleteChapter(uint(id)); err != nil {
+	if err := h.svc.SubmitReview(uint(id)); err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
 	}
 
 	httpx.OkJsonCtx(r.Context(), w, types.Success(map[string]interface{}{
 		"success": true,
-		"message": "删除成功",
+		"message": "提交审核成功",
 	}))
 }
 
-// PublishLearningPath 发布学习路径
-func (h *LearningPathHandler) PublishLearningPath(w http.ResponseWriter, r *http.Request) {
+// Approve 审核通过
+func (h *AdminLearningPathHandler) Approve(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
+		return
+	}
+
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("无效的路径ID"))
+		return
+	}
+
+	if err := h.svc.Approve(uint(id)); err != nil {
+		httpx.ErrorCtx(r.Context(), w, err)
+		return
+	}
+
+	httpx.OkJsonCtx(r.Context(), w, types.Success(map[string]interface{}{
+		"success": true,
+		"message": "审核通过",
+	}))
+}
+
+// Reject 审核拒绝
+func (h *AdminLearningPathHandler) Reject(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
+		return
+	}
+
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("无效的路径ID"))
+		return
+	}
+
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	if err := httpx.ParseJsonBody(r, &req); err != nil {
+		httpx.ErrorCtx(r.Context(), w, err)
+		return
+	}
+
+	if err := h.svc.Reject(uint(id), req.Reason); err != nil {
+		httpx.ErrorCtx(r.Context(), w, err)
+		return
+	}
+
+	httpx.OkJsonCtx(r.Context(), w, types.Success(map[string]interface{}{
+		"success": true,
+		"message": "已拒绝",
+	}))
+}
+
+// Publish 发布学习路径
+func (h *AdminLearningPathHandler) Publish(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
@@ -338,8 +284,8 @@ func (h *LearningPathHandler) PublishLearningPath(w http.ResponseWriter, r *http
 	}))
 }
 
-// UnpublishLearningPath 下架学习路径
-func (h *LearningPathHandler) UnpublishLearningPath(w http.ResponseWriter, r *http.Request) {
+// Unpublish 下架学习路径
+func (h *AdminLearningPathHandler) Unpublish(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
@@ -364,7 +310,7 @@ func (h *LearningPathHandler) UnpublishLearningPath(w http.ResponseWriter, r *ht
 }
 
 // SetFeatured 设置推荐状态
-func (h *LearningPathHandler) SetFeatured(w http.ResponseWriter, r *http.Request) {
+func (h *AdminLearningPathHandler) SetFeatured(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
