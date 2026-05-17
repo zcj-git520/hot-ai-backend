@@ -423,55 +423,55 @@ type AdminGetLearningPathsRequest struct {
 }
 
 type CreateLearningPathRequest struct {
-	Title          string
-	Icon           string
-	Description    string
-	Difficulty     string
-	LevelLabel     string
-	LearningGoals  []string
-	TargetAudience []string
-	EstimatedDays  int
-	EstimatedHours int
-	CoverImage     string
-	IsFeatured     bool
+	Title          string   `json:"title"`
+	Icon           string   `json:"icon"`
+	Description    string   `json:"description"`
+	Difficulty     string   `json:"difficulty"`
+	LevelLabel     string   `json:"level_label"`
+	LearningGoals  []string `json:"learning_goals"`
+	TargetAudience []string `json:"target_audience"`
+	EstimatedDays  int      `json:"estimated_days"`
+	EstimatedHours int      `json:"estimated_hours"`
+	CoverImage     string   `json:"cover_image"`
+	IsFeatured     bool     `json:"is_featured"`
 }
 
 type UpdateLearningPathRequest struct {
-	Title          *string
-	Icon           *string
-	Description    *string
-	Difficulty     *string
-	LevelLabel     *string
-	LearningGoals  []string
-	TargetAudience []string
-	EstimatedDays  *int
-	EstimatedHours *int
-	CoverImage     *string
-	IsFeatured     *bool
-	SortOrder      *int
+	Title          *string   `json:"title"`
+	Icon           *string   `json:"icon"`
+	Description    *string   `json:"description"`
+	Difficulty     *string   `json:"difficulty"`
+	LevelLabel     *string   `json:"level_label"`
+	LearningGoals  []string  `json:"learning_goals"`
+	TargetAudience []string  `json:"target_audience"`
+	EstimatedDays  *int      `json:"estimated_days"`
+	EstimatedHours *int      `json:"estimated_hours"`
+	CoverImage     *string   `json:"cover_image"`
+	IsFeatured     *bool     `json:"is_featured"`
+	SortOrder      *int      `json:"sort_order"`
 }
 
 type CreateChapterRequest struct {
-	Title         string
-	Description   string
-	ContentType   string
-	Content       string
-	VideoURL      string
-	ExternalLinks []string
-	EstimatedHours int
-	IsFree        bool
+	Title         string   `json:"title"`
+	Description   string   `json:"description"`
+	ContentType   string   `json:"content_type"`
+	Content       string   `json:"content"`
+	VideoURL      string   `json:"video_url"`
+	ExternalLinks []string `json:"external_links"`
+	EstimatedHours int     `json:"estimated_hours"`
+	IsFree        bool     `json:"is_free"`
 }
 
 type UpdateChapterRequest struct {
-	Title         *string
-	Description   *string
-	ContentType   *string
-	Content       *string
-	VideoURL      *string
-	ExternalLinks []string
-	EstimatedHours *int
-	OrderIndex    *int
-	IsFree        *bool
+	Title         *string   `json:"title"`
+	Description   *string   `json:"description"`
+	ContentType   *string   `json:"content_type"`
+	Content       *string   `json:"content"`
+	VideoURL      *string   `json:"video_url"`
+	ExternalLinks []string  `json:"external_links"`
+	EstimatedHours *int     `json:"estimated_hours"`
+	OrderIndex    *int      `json:"order_index"`
+	IsFree        *bool     `json:"is_free"`
 }
 
 // ========== 辅助函数 ==========

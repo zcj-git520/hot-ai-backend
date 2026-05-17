@@ -23,7 +23,7 @@ func NewAdminChapterHandler(svc *service.AdminService) *AdminChapterHandler {
 
 // GetChapters 获取章节列表
 func (h *AdminChapterHandler) GetChapters(w http.ResponseWriter, r *http.Request) {
-	pathIDStr := r.PathValue("path_id")
+	pathIDStr := getPathValue(r, "path_id")
 	if pathIDStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
 		return
@@ -46,7 +46,7 @@ func (h *AdminChapterHandler) GetChapters(w http.ResponseWriter, r *http.Request
 
 // GetChapterByID 获取章节详情
 func (h *AdminChapterHandler) GetChapterByID(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
+	idStr := getPathValue(r, "id")
 	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少章节ID"))
 		return
@@ -69,7 +69,7 @@ func (h *AdminChapterHandler) GetChapterByID(w http.ResponseWriter, r *http.Requ
 
 // CreateChapter 创建章节
 func (h *AdminChapterHandler) CreateChapter(w http.ResponseWriter, r *http.Request) {
-	pathIDStr := r.PathValue("path_id")
+	pathIDStr := getPathValue(r, "path_id")
 	if pathIDStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
 		return
@@ -106,7 +106,7 @@ func (h *AdminChapterHandler) CreateChapter(w http.ResponseWriter, r *http.Reque
 
 // UpdateChapter 更新章节
 func (h *AdminChapterHandler) UpdateChapter(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
+	idStr := getPathValue(r, "id")
 	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少章节ID"))
 		return
@@ -135,7 +135,7 @@ func (h *AdminChapterHandler) UpdateChapter(w http.ResponseWriter, r *http.Reque
 
 // DeleteChapter 删除章节
 func (h *AdminChapterHandler) DeleteChapter(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
+	idStr := getPathValue(r, "id")
 	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少章节ID"))
 		return

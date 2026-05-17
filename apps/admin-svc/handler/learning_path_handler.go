@@ -73,7 +73,7 @@ func (h *AdminLearningPathHandler) GetLearningPaths(w http.ResponseWriter, r *ht
 
 // GetLearningPathByID 获取学习路径详情
 func (h *AdminLearningPathHandler) GetLearningPathByID(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
+	idStr := getPathValue(r, "id")
 	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
 		return
@@ -124,7 +124,7 @@ func (h *AdminLearningPathHandler) CreateLearningPath(w http.ResponseWriter, r *
 
 // UpdateLearningPath 更新学习路径
 func (h *AdminLearningPathHandler) UpdateLearningPath(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
+	idStr := getPathValue(r, "id")
 	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
 		return
@@ -153,7 +153,7 @@ func (h *AdminLearningPathHandler) UpdateLearningPath(w http.ResponseWriter, r *
 
 // DeleteLearningPath 删除学习路径
 func (h *AdminLearningPathHandler) DeleteLearningPath(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
+	idStr := getPathValue(r, "id")
 	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
 		return
@@ -178,7 +178,7 @@ func (h *AdminLearningPathHandler) DeleteLearningPath(w http.ResponseWriter, r *
 
 // SubmitReview 提交审核
 func (h *AdminLearningPathHandler) SubmitReview(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
+	idStr := getPathValue(r, "id")
 	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
 		return
@@ -203,7 +203,7 @@ func (h *AdminLearningPathHandler) SubmitReview(w http.ResponseWriter, r *http.R
 
 // Approve 审核通过
 func (h *AdminLearningPathHandler) Approve(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
+	idStr := getPathValue(r, "id")
 	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
 		return
@@ -228,7 +228,7 @@ func (h *AdminLearningPathHandler) Approve(w http.ResponseWriter, r *http.Reques
 
 // Reject 审核拒绝
 func (h *AdminLearningPathHandler) Reject(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
+	idStr := getPathValue(r, "id")
 	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
 		return
@@ -261,7 +261,7 @@ func (h *AdminLearningPathHandler) Reject(w http.ResponseWriter, r *http.Request
 
 // Publish 发布学习路径
 func (h *AdminLearningPathHandler) Publish(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
+	idStr := getPathValue(r, "id")
 	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
 		return
@@ -286,7 +286,7 @@ func (h *AdminLearningPathHandler) Publish(w http.ResponseWriter, r *http.Reques
 
 // Unpublish 下架学习路径
 func (h *AdminLearningPathHandler) Unpublish(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
+	idStr := getPathValue(r, "id")
 	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
 		return
@@ -311,7 +311,7 @@ func (h *AdminLearningPathHandler) Unpublish(w http.ResponseWriter, r *http.Requ
 
 // SetFeatured 设置推荐状态
 func (h *AdminLearningPathHandler) SetFeatured(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
+	idStr := getPathValue(r, "id")
 	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
 		return

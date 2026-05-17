@@ -24,7 +24,7 @@ type LearningPath struct {
 	IsActive       int       `gorm:"column:is_active;default:1" json:"is_active"`
 	SortOrder      int       `gorm:"column:sort_order;default:0" json:"sort_order"`
 	Status         int       `gorm:"column:status;default:1;index:idx_status" json:"status"`
-	PublishedAt    time.Time `gorm:"column:published_at" json:"published_at,omitempty"`
+	PublishedAt    *time.Time `gorm:"column:published_at" json:"published_at,omitempty"`
 	CreatedAt      time.Time `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt      time.Time `gorm:"column:updated_at" json:"updated_at"`
 
