@@ -1,8 +1,11 @@
 package repository
 
 import (
-	"hot-ai-backend/internal/models"
+	"context"
 	"hot-ai-backend/internal/database"
+	"hot-ai-backend/internal/models"
+
+	"github.com/zeromicro/go-zero/core/logx"
 )
 
 // ToolReviewRepository 工具审核记录仓储
@@ -14,13 +17,17 @@ func NewToolReviewRepository() *ToolReviewRepository {
 }
 
 // Create 创建审核记录
-func (r *ToolReviewRepository) Create(record *models.ToolReviewRecord) error {
-	return database.GetDB().Create(record).Error
+func (r *ToolReviewRepository) Create(ctx context.Context, record *models.ToolReviewRecord) error {
+	return database.GetDB().WithContext(ctx).Create(record).Error
 }
 
 // GetByToolID 获取工具的所有审核记录
-func (r *ToolReviewRepository) GetByToolID(toolID uint) ([]models.ToolReviewRecord, error) {
+func (r *ToolReviewRepository) GetByToolID(ctx context.Context, toolID uint) ([]models.ToolReviewRecord, error) {
 	var records []models.ToolReviewRecord
-	err := database.GetDB().Where("tool_id = ?", toolID).Order("created_at DESC").Find(&records).Error
-	return records, err
+	err := database.GetDB().WithContext(ctx).Where("tool_id = ?", toolID).Order("created_at DESC").Find(&records).Error
+	if err != nil {
+		logx.Errorf("Query tool_reviews error: %v", err)
+		return nil, err
+	}
+	return records, nil
 }
