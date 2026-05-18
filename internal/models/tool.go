@@ -43,6 +43,12 @@ type Tool struct {
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 	DeletedAt       *time.Time `json:"deleted_at"`
+
+	// 审核相关字段
+	ReviewStatus    string    `json:"review_status"`     // pending/rejected/approved/revision_requested
+	SubmittedAt     time.Time `json:"submitted_at"`     // 提交时间
+	SubmittedBy     string    `json:"submitted_by"`     // 申请人
+	RevisionReason  string    `json:"revision_reason"`  // 退回原因
 }
 
 // ToolReview 用户评测
