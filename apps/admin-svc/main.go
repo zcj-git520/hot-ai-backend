@@ -72,6 +72,7 @@ func main() {
 func registerRoutes(server *rest.Server, adminService *service.AdminService) {
 	learningPathHandler := handler.NewAdminLearningPathHandler(adminService)
 	chapterHandler := handler.NewAdminChapterHandler(adminService)
+	toolReviewHandler := handler.NewAdminToolReviewHandler()
 
 	// ===== 学习路径管理 =====
 	server.AddRoute(rest.Route{
@@ -170,5 +171,36 @@ func registerRoutes(server *rest.Server, adminService *service.AdminService) {
 		Method:  http.MethodDelete,
 		Path:    "/admin/chapters/:id",
 		Handler: chapterHandler.DeleteChapter,
+	})
+
+	// ===== 工具审核 =====
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/admin/tools/pending",
+		Handler: toolReviewHandler.GetPendingTools,
+	})
+
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/admin/tools/:id",
+		Handler: toolReviewHandler.GetToolDetailForReview,
+	})
+
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPost,
+		Path:    "/admin/tools/:id/approve",
+		Handler: toolReviewHandler.ApproveTool,
+	})
+
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPost,
+		Path:    "/admin/tools/:id/reject",
+		Handler: toolReviewHandler.RejectTool,
+	})
+
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPost,
+		Path:    "/admin/tools/:id/request-revision",
+		Handler: toolReviewHandler.RequestRevision,
 	})
 }
