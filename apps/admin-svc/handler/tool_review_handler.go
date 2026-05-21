@@ -15,14 +15,12 @@ import (
 
 // AdminToolReviewHandler 管理后台工具审核处理器
 type AdminToolReviewHandler struct {
-	toolRepo     *repository.ToolRepository
-	reviewRepo   *repository.ToolReviewRepository
+	reviewRepo *repository.ToolReviewRepository
 }
 
 // NewAdminToolReviewHandler 创建工具审核处理器实例
 func NewAdminToolReviewHandler() *AdminToolReviewHandler {
 	return &AdminToolReviewHandler{
-		toolRepo:   repository.NewToolRepository(database.GetDB().DB()),
 		reviewRepo: repository.NewToolReviewRepository(),
 	}
 }
@@ -53,7 +51,7 @@ func (h *AdminToolReviewHandler) GetPendingTools(w http.ResponseWriter, r *http.
 	var tools []models.Tool
 	var total int64
 
-	query := database.GetDB().Model(&models.Tool{}).Where("review_status = ?", "pending")
+	query := database.GetDB().Table("tools").Where("review_status = ?", "pending")
 
 	if search != "" {
 		query = query.Where("name LIKE ? OR description LIKE ?", "%"+search+"%", "%"+search+"%")
@@ -88,7 +86,7 @@ func (h *AdminToolReviewHandler) GetToolDetailForReview(w http.ResponseWriter, r
 		return
 	}
 
-	id, err := strconv.ParseUint(idStr, 10, 64)
+	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		httpx.ErrorCtx(ctx, w, fmt.Errorf("无效的工具ID"))
 		return
@@ -96,13 +94,13 @@ func (h *AdminToolReviewHandler) GetToolDetailForReview(w http.ResponseWriter, r
 
 	// 查询工具详情
 	var tool models.Tool
-	if err := database.GetDB().Where("id = ?", id).First(&tool).Error; err != nil {
+	if err := database.GetDB().Table("tools").Where("id = ?", uint(id)).First(&tool).Error; err != nil {
 		httpx.ErrorCtx(ctx, w, fmt.Errorf("工具不存在"))
 		return
 	}
 
 	// 查询审核历史
-	reviews, err := h.reviewRepo.GetByToolID(ctx, id)
+	reviews, err := h.reviewRepo.GetByToolID(ctx, uint(id))
 	if err != nil {
 		httpx.ErrorCtx(ctx, w, err)
 		return
@@ -126,7 +124,7 @@ func (h *AdminToolReviewHandler) ApproveTool(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	id, err := strconv.ParseUint(idStr, 10, 64)
+	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		httpx.ErrorCtx(ctx, w, fmt.Errorf("无效的工具ID"))
 		return
@@ -139,7 +137,7 @@ func (h *AdminToolReviewHandler) ApproveTool(w http.ResponseWriter, r *http.Requ
 	}
 
 	// 更新工具状态为已审核通过
-	result := database.GetDB().Model(&models.Tool{}).Where("id = ?", id).Updates(map[string]interface{}{
+	result := database.GetDB().Table("tools").Where("id = ?", id).Updates(map[string]interface{}{
 		"review_status": "approved",
 	})
 	if result.Error != nil {
@@ -179,7 +177,7 @@ func (h *AdminToolReviewHandler) RejectTool(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	id, err := strconv.ParseUint(idStr, 10, 64)
+	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		httpx.ErrorCtx(ctx, w, fmt.Errorf("无效的工具ID"))
 		return
@@ -205,7 +203,7 @@ func (h *AdminToolReviewHandler) RejectTool(w http.ResponseWriter, r *http.Reque
 	}
 
 	// 更新工具状态为已拒绝
-	result := database.GetDB().Model(&models.Tool{}).Where("id = ?", id).Updates(map[string]interface{}{
+	result := database.GetDB().Table("tools").Where("id = ?", id).Updates(map[string]interface{}{
 		"review_status":   "rejected",
 		"revision_reason": req.Reason,
 	})
@@ -246,7 +244,7 @@ func (h *AdminToolReviewHandler) RequestRevision(w http.ResponseWriter, r *http.
 		return
 	}
 
-	id, err := strconv.ParseUint(idStr, 10, 64)
+	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		httpx.ErrorCtx(ctx, w, fmt.Errorf("无效的工具ID"))
 		return
@@ -272,7 +270,7 @@ func (h *AdminToolReviewHandler) RequestRevision(w http.ResponseWriter, r *http.
 	}
 
 	// 更新工具状态为需修改
-	result := database.GetDB().Model(&models.Tool{}).Where("id = ?", id).Updates(map[string]interface{}{
+	result := database.GetDB().Table("tools").Where("id = ?", id).Updates(map[string]interface{}{
 		"review_status":   "revision_requested",
 		"revision_reason": req.Reason,
 	})
