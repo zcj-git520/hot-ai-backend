@@ -68,6 +68,7 @@ type Article struct {
 	CategoryID     uint      `gorm:"column:category_id;not null;index:idx_category_id" json:"category_id"`
 	PublishedAt    time.Time `gorm:"column:published_at;not null;index:idx_published_at" json:"published_at"`
 	Status         int       `gorm:"column:status;default:1;index:idx_status" json:"status"` // 0-待审核, 1-已发布, 2-已删除
+	RejectionReason string   `gorm:"column:rejection_reason;type:varchar(500)" json:"rejection_reason,omitempty"`
 	CreatedAt      time.Time `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt      time.Time `gorm:"column:updated_at" json:"updated_at"`
 

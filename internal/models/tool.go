@@ -37,6 +37,7 @@ type Tool struct {
 	Tags            []string `json:"tags"`
 	Featured        bool    `json:"featured"`
 	Status          int8    `json:"status"`
+	IsOnline        bool    `json:"is_online"`
 	ExternalID      *string   `json:"external_id"`
 	CreatedBy       *string   `json:"created_by"`
 	UpdatedBy       *string   `json:"updated_by"`
