@@ -33,6 +33,16 @@ type UserRepository interface {
 	// 权限查询
 	GetUserPermissions(ctx context.Context, userID string) ([]*models.Permission, error)
 	HasPermission(ctx context.Context, userID, permissionName string) (bool, error)
+
+	// 管理后台方法
+	GetUsers(page, pageSize int, role, status string) ([]models.User, int64, error)
+	GetUserByID(id string) (*models.User, error)
+	UpdateUserStatus(id string, status models.UserStatus) error
+	UpdateUserRole(userID string, role string) error
+	CreateAdminLog(log *models.AdminOperationLog) error
+	GetAdminLogs(targetUserID string, page, pageSize int) ([]models.AdminOperationLog, int64, error)
+	CreateUser(user *models.User) error
+	UpdatePassword(userID string, passwordHash string) error
 }
 
 type userRepository struct {
@@ -178,4 +188,126 @@ func (r *userRepository) GetUserCount() (int64, error) {
 		return 0, err
 	}
 	return total, nil
+}
+
+// GetUsers 获取用户列表（分页、筛选）
+func (r *userRepository) GetUsers(page, pageSize int, role, status string) ([]models.User, int64, error) {
+	var users []models.User
+	var total int64
+
+	query := r.db.Model(&models.User{})
+
+	// 角色筛选 - 需要 JOIN user_roles 和 roles 表
+	if role != "" && role != "all" {
+		query = query.
+			Joins("JOIN user_roles ON users.id = user_roles.user_id").
+			Joins("JOIN roles ON user_roles.role_id = roles.id").
+			Where("roles.name = ?", role)
+	}
+
+	// 状态筛选
+	if status != "" && status != "all" {
+		query = query.Where("users.status = ?", status)
+	}
+
+	// 获取总数
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if total == 0 {
+		return users, 0, nil
+	}
+
+	// 分页查询
+	offset := (page - 1) * pageSize
+	err := query.Offset(offset).Limit(pageSize).Order("users.created_at DESC").Find(&users).Error
+	return users, total, err
+}
+
+// GetUserByID 根据ID获取用户
+func (r *userRepository) GetUserByID(id string) (*models.User, error) {
+	var user models.User
+	err := r.db.First(&user, "id = ?", id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// UpdateUserStatus 更新用户状态 (active -> inactive/banned, or vice versa)
+func (r *userRepository) UpdateUserStatus(id string, status models.UserStatus) error {
+	return r.db.Model(&models.User{}).Where("id = ?", id).Update("status", status).Error
+}
+
+// UpdateUserRole 更新用户角色 (需要操作 user_roles 表)
+// role: "admin" 或 "user"
+func (r *userRepository) UpdateUserRole(userID string, role string) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// 先删除用户的所有角色
+		if err := tx.Delete(&models.UserRole{}, "user_id = ?", userID).Error; err != nil {
+			return err
+		}
+
+		// 如果不是空角色，则添加新角色
+		if role != "" {
+			// 查询角色ID
+			var roleRecord models.Role
+			if err := tx.Where("name = ?", role).First(&roleRecord).Error; err != nil {
+				return err
+			}
+
+			// 添加新角色
+			userRole := &models.UserRole{
+				UserID: userID,
+				RoleID: roleRecord.ID,
+			}
+			if err := tx.Create(userRole).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+// CreateAdminLog 创建管理操作日志
+func (r *userRepository) CreateAdminLog(log *models.AdminOperationLog) error {
+	return r.db.Create(log).Error
+}
+
+// GetAdminLogs 获取操作日志
+func (r *userRepository) GetAdminLogs(targetUserID string, page, pageSize int) ([]models.AdminOperationLog, int64, error) {
+	var logs []models.AdminOperationLog
+	var total int64
+
+	query := r.db.Model(&models.AdminOperationLog{})
+
+	if targetUserID != "" {
+		query = query.Where("target_user_id = ?", targetUserID)
+	}
+
+	// 获取总数
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if total == 0 {
+		return logs, 0, nil
+	}
+
+	// 分页查询
+	offset := (page - 1) * pageSize
+	err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&logs).Error
+	return logs, total, err
+}
+
+// CreateUser 创建用户
+func (r *userRepository) CreateUser(user *models.User) error {
+	return r.db.Create(user).Error
+}
+
+// UpdatePassword 更新密码
+func (r *userRepository) UpdatePassword(userID string, passwordHash string) error {
+	return r.db.Model(&models.User{}).Where("id = ?", userID).Update("password_hash", passwordHash).Error
 }
