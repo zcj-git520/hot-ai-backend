@@ -51,3 +51,7 @@ mongodb_data/
 
 # Redis 数据
 redis_data/
+
+# 可执行文件
+*-svc
+*_server
