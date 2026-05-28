@@ -48,8 +48,8 @@ func (r *ToolRepository) GetCategories() ([]models.ToolCategory, error) {
 
 // GetTools 获取工具列表
 func (r *ToolRepository) GetTools(params map[string]interface{}) ([]models.Tool, int64, error) {
-	query := "SELECT id, name, slug, icon, description, official_url, documentation_url, pricing, pricing_description, category_id, difficulty, rating, review_count, view_count, popularity, tags, featured, status, external_id, created_by, updated_by, created_at, updated_at, deleted_at FROM tools WHERE deleted_at IS NULL AND status = 1"
-	countQuery := "SELECT COUNT(*) FROM tools WHERE deleted_at IS NULL AND status = 1"
+	query := "SELECT id, name, slug, icon, description, official_url, documentation_url, pricing, pricing_description, category_id, difficulty, rating, review_count, view_count, popularity, tags, featured, status, external_id, created_by, updated_by, created_at, updated_at, deleted_at, is_online FROM tools WHERE deleted_at IS NULL AND status = 1 AND is_online = 1"
+	countQuery := "SELECT COUNT(*) FROM tools WHERE deleted_at IS NULL AND status = 1 AND is_online = 1"
 
 	whereClauses := []string{}
 	args := []interface{}{}
@@ -125,7 +125,7 @@ func (r *ToolRepository) GetTools(params map[string]interface{}) ([]models.Tool,
 	for rows.Next() {
 		var tool models.Tool
 		var tagsStr sql.NullString
-		err := rows.Scan(&tool.ID, &tool.Name, &tool.Slug, &tool.Icon, &tool.Description, &tool.OfficialURL, &tool.DocumentationURL, &tool.Pricing, &tool.PricingDesc, &tool.CategoryID, &tool.Difficulty, &tool.Rating, &tool.ReviewCount, &tool.ViewCount, &tool.Popularity, &tagsStr, &tool.Featured, &tool.Status, &tool.ExternalID, &tool.CreatedBy, &tool.UpdatedBy, &tool.CreatedAt, &tool.UpdatedAt, &tool.DeletedAt)
+		err := rows.Scan(&tool.ID, &tool.Name, &tool.Slug, &tool.Icon, &tool.Description, &tool.OfficialURL, &tool.DocumentationURL, &tool.Pricing, &tool.PricingDesc, &tool.CategoryID, &tool.Difficulty, &tool.Rating, &tool.ReviewCount, &tool.ViewCount, &tool.Popularity, &tagsStr, &tool.Featured, &tool.Status, &tool.ExternalID, &tool.CreatedBy, &tool.UpdatedBy, &tool.CreatedAt, &tool.UpdatedAt, &tool.DeletedAt, &tool.IsOnline)
 		if err != nil {
 			logx.Errorf("Scan tool error: %v", err)
 			continue

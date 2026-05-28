@@ -18,7 +18,7 @@ func (r *ArticleRepository) GetList(page, pageSize int, categoryCode string, key
 	var articles []models.Article
 	var total int64
 
-	query := database.GetDB().Model(&models.Article{})
+	query := database.GetDB().Model(&models.Article{}).Where("articles.status = ?", 1)
 
 	// 分类筛选 - 通过category_code关联查询
 	if categoryCode != "" && categoryCode != "all" {
@@ -140,7 +140,7 @@ func (r *ArticleRepository) IncrementViewCount(id uint) error {
 // GetCount 获取文章总数
 func (r *ArticleRepository) GetCount() (int64, error) {
 	var total int64
-	if err := database.GetDB().Model(&models.Article{}).Where("status = ?", "published").Count(&total).Error; err != nil {
+	if err := database.GetDB().Model(&models.Article{}).Where("articles.status = ?", "published").Count(&total).Error; err != nil {
 		return 0, err
 	}
 	return total, nil
