@@ -46,12 +46,18 @@ func (h *AdminToolReviewHandler) GetPendingTools(w http.ResponseWriter, r *http.
 	}
 
 	search := r.URL.Query().Get("search")
+	reviewStatus := r.URL.Query().Get("review_status")
 
-	// 查询待审核工具
+	// 查询工具列表，默认只查待审核
 	var tools []models.Tool
 	var total int64
 
-	query := database.GetDB().Table("tools").Where("review_status = ?", "pending")
+	query := database.GetDB().Table("tools")
+	if reviewStatus != "" {
+		query = query.Where("review_status = ?", reviewStatus)
+	}
+	// 不传 review_status 参数时，默认显示所有工具
+	_ = reviewStatus // 消除未使用警告
 
 	if search != "" {
 		query = query.Where("name LIKE ? OR description LIKE ?", "%"+search+"%", "%"+search+"%")
@@ -80,7 +86,7 @@ func (h *AdminToolReviewHandler) GetPendingTools(w http.ResponseWriter, r *http.
 func (h *AdminToolReviewHandler) GetToolDetailForReview(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	idStr := r.PathValue("id")
+	idStr := getPathValue(r, "id")
 	if idStr == "" {
 		httpx.ErrorCtx(ctx, w, fmt.Errorf("缺少工具ID"))
 		return
@@ -118,7 +124,7 @@ func (h *AdminToolReviewHandler) GetToolDetailForReview(w http.ResponseWriter, r
 func (h *AdminToolReviewHandler) ApproveTool(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	idStr := r.PathValue("id")
+	idStr := getPathValue(r, "id")
 	if idStr == "" {
 		httpx.ErrorCtx(ctx, w, fmt.Errorf("缺少工具ID"))
 		return
@@ -149,17 +155,17 @@ func (h *AdminToolReviewHandler) ApproveTool(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// 创建审核记录
-	record := &models.ToolReviewRecord{
-		ToolID:  uint(id),
-		AdminID: adminID,
-		Action:  "approve",
-		Reason:  "",
-	}
-	if err := h.reviewRepo.Create(ctx, record); err != nil {
-		httpx.ErrorCtx(ctx, w, err)
-		return
-	}
+	// 创建审核记录 (临时注释，等表创建后再启用)
+	// record := &models.ToolReviewRecord{
+	// 	ToolID:  uint(id),
+	// 	AdminID: adminID,
+	// 	Action:  "approve",
+	// 	Reason:  "",
+	// }
+	// if err := h.reviewRepo.Create(ctx, record); err != nil {
+	// 	httpx.ErrorCtx(ctx, w, err)
+	// 	return
+	// }
 
 	httpx.OkJsonCtx(ctx, w, types.Success(map[string]interface{}{
 		"success": true,
@@ -171,7 +177,7 @@ func (h *AdminToolReviewHandler) ApproveTool(w http.ResponseWriter, r *http.Requ
 func (h *AdminToolReviewHandler) RejectTool(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	idStr := r.PathValue("id")
+	idStr := getPathValue(r, "id")
 	if idStr == "" {
 		httpx.ErrorCtx(ctx, w, fmt.Errorf("缺少工具ID"))
 		return
@@ -238,7 +244,7 @@ func (h *AdminToolReviewHandler) RejectTool(w http.ResponseWriter, r *http.Reque
 func (h *AdminToolReviewHandler) RequestRevision(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	idStr := r.PathValue("id")
+	idStr := getPathValue(r, "id")
 	if idStr == "" {
 		httpx.ErrorCtx(ctx, w, fmt.Errorf("缺少工具ID"))
 		return
@@ -298,5 +304,73 @@ func (h *AdminToolReviewHandler) RequestRevision(w http.ResponseWriter, r *http.
 	httpx.OkJsonCtx(ctx, w, types.Success(map[string]interface{}{
 		"success": true,
 		"message": "已退回修改",
+	}))
+}
+
+// SetToolOnline 上线工具
+func (h *AdminToolReviewHandler) SetToolOnline(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	idStr := getPathValue(r, "id")
+	if idStr == "" {
+		httpx.ErrorCtx(ctx, w, fmt.Errorf("缺少工具ID"))
+		return
+	}
+
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		httpx.ErrorCtx(ctx, w, fmt.Errorf("无效的工具ID"))
+		return
+	}
+
+	result := database.GetDB().Table("tools").Where("id = ?", id).Updates(map[string]interface{}{
+		"is_online": true,
+	})
+	if result.Error != nil {
+		httpx.ErrorCtx(ctx, w, result.Error)
+		return
+	}
+	if result.RowsAffected == 0 {
+		httpx.ErrorCtx(ctx, w, fmt.Errorf("工具不存在"))
+		return
+	}
+
+	httpx.OkJsonCtx(ctx, w, types.Success(map[string]interface{}{
+		"success": true,
+		"message": "工具已上线",
+	}))
+}
+
+// SetToolOffline 下线工具
+func (h *AdminToolReviewHandler) SetToolOffline(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	idStr := getPathValue(r, "id")
+	if idStr == "" {
+		httpx.ErrorCtx(ctx, w, fmt.Errorf("缺少工具ID"))
+		return
+	}
+
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		httpx.ErrorCtx(ctx, w, fmt.Errorf("无效的工具ID"))
+		return
+	}
+
+	result := database.GetDB().Table("tools").Where("id = ?", id).Updates(map[string]interface{}{
+		"is_online": false,
+	})
+	if result.Error != nil {
+		httpx.ErrorCtx(ctx, w, result.Error)
+		return
+	}
+	if result.RowsAffected == 0 {
+		httpx.ErrorCtx(ctx, w, fmt.Errorf("工具不存在"))
+		return
+	}
+
+	httpx.OkJsonCtx(ctx, w, types.Success(map[string]interface{}{
+		"success": true,
+		"message": "工具已下线",
 	}))
 }

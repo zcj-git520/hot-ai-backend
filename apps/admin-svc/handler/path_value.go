@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 )
@@ -19,10 +20,13 @@ func getPathValue(r *http.Request, name string) string {
 	path := r.URL.Path
 	parts := strings.Split(path, "/")
 
+	// 调试日志
+	fmt.Printf("[getPathValue] path=%s, name=%s, parts=%v\n", path, name, parts)
+
 	// 定义参数名与前置路由段的映射
 	paramMapping := map[string][]string{
 		"path_id": {"learning-paths"},
-		"id":     {"chapters", "learning-paths"},
+		"id":     {"chapters", "learning-paths", "tools", "articles", "professions", "users"},
 	}
 
 	prefixes, ok := paramMapping[name]
@@ -44,7 +48,9 @@ func getPathValue(r *http.Request, name string) string {
 	for i, part := range parts {
 		for _, prefix := range prefixes {
 			if part == prefix && i+1 < len(parts) {
-				return parts[i+1]
+				result := parts[i+1]
+				fmt.Printf("[getPathValue] found %s at index %d, value=%s\n", prefix, i, result)
+				return result
 			}
 		}
 	}
