@@ -43,13 +43,7 @@ func (h *ProfessionHandler) GetProfessions(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	resp, err := h.professionService.GetProfessions(&service.GetProfessionsRequest{
-		Page:       page,
-		PageSize:   pageSize,
-		CategoryID: categoryID,
-		RiskLevel:  riskLevel,
-		Keyword:    keyword,
-	})
+	resp, err := h.professionService.GetProfessions(page, pageSize, categoryID, riskLevel, keyword)
 	if err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
@@ -80,13 +74,13 @@ func (h *ProfessionHandler) GetProfessionByID(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	id, err := strconv.ParseUint(idStr, 10, 64)
+	_, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("无效的职业ID"))
 		return
 	}
 
-	profession, err := h.professionService.GetProfessionByID(uint(id))
+	profession, err := h.professionService.GetProfessionByID(idStr)
 	if err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return

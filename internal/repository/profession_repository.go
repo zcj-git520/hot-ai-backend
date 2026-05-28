@@ -231,3 +231,18 @@ func (r *ProfessionRepository) GetProfessionCount() (int64, error) {
 	}
 	return total, nil
 }
+
+// Create 创建职业
+func (r *ProfessionRepository) Create(profession *models.Profession) error {
+	return database.GetDB().Create(profession).Error
+}
+
+// Update 更新职业
+func (r *ProfessionRepository) Update(profession *models.Profession) error {
+	return database.GetDB().Save(profession).Error
+}
+
+// Delete 删除职业（软删除）
+func (r *ProfessionRepository) Delete(id uint) error {
+	return database.GetDB().Model(&models.Profession{}).Where("id = ?", id).Update("status", 0).Error
+}
