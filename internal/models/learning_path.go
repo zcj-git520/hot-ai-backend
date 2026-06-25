@@ -27,6 +27,7 @@ type LearningPath struct {
 	PublishedAt    *time.Time `gorm:"column:published_at" json:"published_at,omitempty"`
 	CreatedAt      time.Time `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt      time.Time `gorm:"column:updated_at" json:"updated_at"`
+	AccessLevel    int       `gorm:"column:access_level;type:tinyint unsigned;not null;default:2;index:idx_access_level" json:"access_level"` // 0=游客, 1=普通用户, 2=会员
 
 	// 关联数据（非数据库字段）
 	Chapters       []PathChapter `gorm:"-" json:"chapters,omitempty"`
@@ -54,6 +55,7 @@ type PathChapter struct {
 	Status        int       `gorm:"column:status;default:1;index:idx_status" json:"status"`
 	CreatedAt     time.Time `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt     time.Time `gorm:"column:updated_at" json:"updated_at"`
+	AccessLevel   int       `gorm:"column:access_level;type:tinyint unsigned;not null;default:2;index:idx_access_level" json:"access_level"` // 0=游客, 1=普通用户, 2=会员
 }
 
 func (PathChapter) TableName() string {

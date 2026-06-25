@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"hot-ai-backend/internal/access"
+	"hot-ai-backend/internal/middleware"
 	"hot-ai-backend/internal/service"
 	"hot-ai-backend/internal/types"
 
@@ -49,7 +51,23 @@ func (h *ProfessionHandler) GetProfessions(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// service 已经按 level=0 算了基础标签，handler 用 ctx 里的真实 level 重新算
+	userLevel := middleware.GetUserLevelFromContext(r.Context())
+	for i := range resp.Professions {
+		// 重新覆盖 IsLocked / RequiredLevel
+		decision := access.Decide(userLevel, resp.Professions[i].AccessLevel)
+		resp.Professions[i].IsLocked = !decision.Allow
+		if !decision.Allow {
+			resp.Professions[i].RequiredLevel = resp.Professions[i].AccessLevel
+			resp.Professions[i].RequiredLevelName = access.LevelName(resp.Professions[i].AccessLevel)
+		} else {
+			resp.Professions[i].RequiredLevel = 0
+			resp.Professions[i].RequiredLevelName = ""
+		}
+	}
+	_ = userLevel
 	httpx.OkJsonCtx(r.Context(), w, types.Success(resp))
+
 }
 
 // GetProfessionByID 根据 ID 获取职业详情
@@ -86,7 +104,10 @@ func (h *ProfessionHandler) GetProfessionByID(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, types.Success(profession))
+	// 详情场景：不够级别时裁剪 description + 注入 locked 占位
+	userLevel := middleware.GetUserLevelFromContext(r.Context())
+	view := service.ToProfessionView(profession, userLevel)
+	httpx.OkJsonCtx(r.Context(), w, types.Success(view))
 }
 
 // GetCategories 获取职业分类列表

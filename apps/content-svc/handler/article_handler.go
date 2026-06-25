@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"hot-ai-backend/internal/middleware"
 	"hot-ai-backend/internal/service"
 	"hot-ai-backend/internal/types"
 
@@ -20,6 +21,15 @@ func NewArticleHandler(articleService *service.ArticleService) *ArticleHandler {
 	return &ArticleHandler{
 		articleService: articleService,
 	}
+}
+
+// ArticlesListResponse 文章列表响应 (用 View 包装，携带 access 信息)
+type ArticlesListResponse struct {
+	Articles   []service.ArticleView `json:"articles"`
+	Total      int64                 `json:"total"`
+	TotalPages int                   `json:"total_pages"`
+	Page       int                   `json:"page"`
+	PageSize   int                   `json:"page_size"`
 }
 
 // GetArticles 获取文章列表
@@ -47,7 +57,17 @@ func (h *ArticleHandler) GetArticles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, types.Success(resp))
+	// 给列表里每篇文章打 access 标签
+	userLevel := middleware.GetUserLevelFromContext(r.Context())
+	viewList := service.ToViewList(resp.Articles, userLevel)
+
+	httpx.OkJsonCtx(r.Context(), w, types.Success(&ArticlesListResponse{
+		Articles:   viewList,
+		Total:      resp.Total,
+		TotalPages: resp.TotalPages,
+		Page:       resp.Page,
+		PageSize:   resp.PageSize,
+	}))
 }
 
 // GetArticleByID 根据ID获取文章详情
@@ -55,7 +75,7 @@ func (h *ArticleHandler) GetArticleByID(w http.ResponseWriter, r *http.Request) 
 	// 从URL路径参数获取ID - go-zero将路径参数存储在r.URL.Path中
 	// 对于路由 /api/articles/:id,需要手动解析
 	idStr := r.PathValue("id")
-	
+
 	// 如果PathValue不可用,尝试从context中获取
 	if idStr == "" {
 		// 尝试从URL path中手动提取
@@ -69,7 +89,7 @@ func (h *ArticleHandler) GetArticleByID(w http.ResponseWriter, r *http.Request) 
 			}
 		}
 	}
-	
+
 	if idStr == "" {
 		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少文章ID"))
 		return
@@ -81,7 +101,11 @@ func (h *ArticleHandler) GetArticleByID(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, types.Success(article))
+	// 应用 access 决策：游客拿 500 字预览 + 占位卡；登录/会员拿全文
+	userLevel := middleware.GetUserLevelFromContext(r.Context())
+	view := service.ToView(article, userLevel)
+
+	httpx.OkJsonCtx(r.Context(), w, types.Success(view))
 }
 
 // GetCategories 获取文章分类列表

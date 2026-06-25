@@ -1,6 +1,7 @@
 package service
 
 import (
+	"hot-ai-backend/internal/access"
 	"hot-ai-backend/internal/models"
 	"hot-ai-backend/internal/repository"
 )
@@ -175,4 +176,109 @@ func (s *LearningPathService) IncrementStartCount(pathID uint) error {
 // GetLearningPathCount 获取学习路径总数
 func (s *LearningPathService) GetLearningPathCount() (int64, error) {
 	return s.learningPathRepo.GetLearningPathCount()
+}
+
+// LearningPathView 学习路径详情响应 (含 access 决策)
+type LearningPathView struct {
+	*models.LearningPath
+	IsLocked          bool                  `json:"is_locked"`
+	RequiredLevel     int                   `json:"required_level,omitempty"`
+	RequiredLevelName string                `json:"required_level_name,omitempty"`
+	Locked            *access.LockedContent `json:"locked,omitempty"`
+	// 内嵌章节也走 access 决策, 用 ChaptersView 替代原始 Chapters
+	ChaptersView []PathChapterView `json:"chapters_view,omitempty"`
+}
+
+// ToLearningPathView 把 LearningPath 包成 view，根据 userLevel 算 access
+// 同时给内嵌的 Chapters 打 access 标签 (effective = max(path, chapter))
+func ToLearningPathView(p *models.LearningPath, userLevel int) *LearningPathView {
+	v := &LearningPathView{LearningPath: p}
+	decision := access.Decide(userLevel, p.AccessLevel)
+	v.IsLocked = !decision.Allow
+	if !decision.Allow {
+		v.RequiredLevel = p.AccessLevel
+		v.RequiredLevelName = access.LevelName(p.AccessLevel)
+		preview, _ := access.TruncateContent(p.Description, access.GuestPreviewChars)
+		p.Description = preview
+		lp := access.LockedPlaceholder("学习路径", p.AccessLevel)
+		v.Locked = &lp
+	}
+	// 内嵌章节走 PathChapterListView — 每章按 effective = max(父, 子) 判锁
+	if len(p.Chapters) > 0 {
+		v.ChaptersView = PathChapterListView(p.Chapters, userLevel, p.AccessLevel)
+		// 同时把原始 chapters 清空避免泄漏无锁信息的 content (这里没有 content, 只为安全)
+		p.Chapters = nil
+	}
+	return v
+}
+
+// LearningPathListView 给列表里每条路径打 is_locked 标签
+func LearningPathListView(paths []models.LearningPath, userLevel int) []LearningPathView {
+	out := make([]LearningPathView, 0, len(paths))
+	for i := range paths {
+		v := LearningPathView{LearningPath: &paths[i]}
+		decision := access.Decide(userLevel, paths[i].AccessLevel)
+		v.IsLocked = !decision.Allow
+		if !decision.Allow {
+			v.RequiredLevel = paths[i].AccessLevel
+			v.RequiredLevelName = access.LevelName(paths[i].AccessLevel)
+		}
+		out = append(out, v)
+	}
+	return out
+}
+
+// PathChapterView 章节详情响应 (含 access 决策)
+type PathChapterView struct {
+	*models.PathChapter
+	IsLocked          bool                  `json:"is_locked"`
+	RequiredLevel     int                   `json:"required_level,omitempty"`
+	RequiredLevelName string                `json:"required_level_name,omitempty"`
+	Locked            *access.LockedContent `json:"locked,omitempty"`
+}
+
+// ToPathChapterView 把 PathChapter 包成 view，根据 userLevel 算 access
+// 章节的 effective level = max(parent path level, chapter level)
+func ToPathChapterView(c *models.PathChapter, userLevel int, pathAccessLevel ...int) *PathChapterView {
+	effective := c.AccessLevel
+	if len(pathAccessLevel) > 0 && pathAccessLevel[0] > effective {
+		effective = pathAccessLevel[0]
+	}
+	v := &PathChapterView{PathChapter: c}
+	decision := access.Decide(userLevel, effective)
+	v.IsLocked = !decision.Allow
+	if !decision.Allow {
+		v.RequiredLevel = effective
+		v.RequiredLevelName = access.LevelName(effective)
+		preview, _ := access.TruncateContent(c.Content, access.GuestPreviewChars)
+		c.Content = preview
+		lp := access.LockedPlaceholder("章节", effective)
+		v.Locked = &lp
+	}
+	return v
+}
+
+// PathChapterListView 给章节列表打 is_locked 标签
+// pathAccessLevel 为父路径的 access level，章节 effective = max(父, 子)
+func PathChapterListView(chapters []models.PathChapter, userLevel int, pathAccessLevel ...int) []PathChapterView {
+	parentLevel := 0
+	if len(pathAccessLevel) > 0 {
+		parentLevel = pathAccessLevel[0]
+	}
+	out := make([]PathChapterView, 0, len(chapters))
+	for i := range chapters {
+		v := PathChapterView{PathChapter: &chapters[i]}
+		effective := chapters[i].AccessLevel
+		if parentLevel > effective {
+			effective = parentLevel
+		}
+		decision := access.Decide(userLevel, effective)
+		v.IsLocked = !decision.Allow
+		if !decision.Allow {
+			v.RequiredLevel = effective
+			v.RequiredLevelName = access.LevelName(effective)
+		}
+		out = append(out, v)
+	}
+	return out
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"hot-ai-backend/internal/access"
 	"hot-ai-backend/internal/cache"
 	"hot-ai-backend/internal/models"
 	"hot-ai-backend/internal/repository"
@@ -198,8 +199,11 @@ func (s *AuthService) Login(ctx context.Context, req *LoginRequest, ip string) (
 		roleNames[i] = role.Name
 	}
 
+	// 计算访问级别
+	level := access.ComputeLevel(user)
+
 	// 生成 Token
-	tokenPair, err := jwtutil.GenerateTokenPair(s.jwtConfig, user.ID, roleNames)
+	tokenPair, err := jwtutil.GenerateTokenPair(s.jwtConfig, user.ID, roleNames, level)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
@@ -254,8 +258,11 @@ func (s *AuthService) RefreshToken(ctx context.Context, req *RefreshTokenRequest
 		roleNames[i] = role.Name
 	}
 
+	// 重新计算 level (会员状态可能已变化，不信任 refresh token 里的旧值)
+	level := access.ComputeLevel(user)
+
 	// 生成新的 Access Token
-	newTokenPair, err := jwtutil.GenerateTokenPair(s.jwtConfig, user.ID, roleNames)
+	newTokenPair, err := jwtutil.GenerateTokenPair(s.jwtConfig, user.ID, roleNames, level)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}

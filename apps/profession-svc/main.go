@@ -11,6 +11,7 @@ import (
 	"github.com/zeromicro/go-zero/rest"
 
 	"hot-ai-backend/internal/database"
+	"hot-ai-backend/internal/middleware"
 	"hot-ai-backend/internal/repository"
 	"hot-ai-backend/internal/service"
 )
@@ -25,6 +26,11 @@ type ProfessionSvcConf struct {
 		MySQL struct {
 			DSN string `json:",optional"`
 		}
+	}
+	// JWT 配置
+	Auth struct {
+		AccessSecret string `json:",default=your-secret-key-change-in-production"`
+		AccessExpire int    `json:",default=86400"`
 	}
 }
 
@@ -67,49 +73,57 @@ func main() {
 	professionService := service.NewProfessionService(professionRepo)
 
 	// 注册路由
-	registerRoutes(server, professionService)
+	registerRoutes(server, c.Auth.AccessSecret, professionService)
 
 	fmt.Printf("Starting profession-svc at %s:%d...\n", c.Host, c.Port)
 	server.Start()
 }
 
 // registerRoutes 注册路由
-func registerRoutes(server *rest.Server, professionService *service.ProfessionService) {
+func registerRoutes(server *rest.Server, jwtSecret string, professionService *service.ProfessionService) {
 	// 创建处理器
 	professionHandler := handler.NewProfessionHandler(professionService)
+
+	// OptionalAuth 中间件
+	optAuth := middleware.OptionalAuth(jwtSecret)
+	wrapFunc := func(h func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			h(w, r)
+		}
+	}
 
 	// 职业列表
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/professions",
-		Handler: professionHandler.GetProfessions,
+		Handler: optAuth(wrapFunc(professionHandler.GetProfessions)).ServeHTTP,
 	})
 
 	// 职业分类
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/professions/categories",
-		Handler: professionHandler.GetCategories,
+		Handler: optAuth(wrapFunc(professionHandler.GetCategories)).ServeHTTP,
 	})
 
 	// 风险等级
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/professions/risk-levels",
-		Handler: professionHandler.GetRiskLevels,
+		Handler: optAuth(wrapFunc(professionHandler.GetRiskLevels)).ServeHTTP,
 	})
 
 	// 搜索职业
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/professions/search",
-		Handler: professionHandler.SearchProfessions,
+		Handler: optAuth(wrapFunc(professionHandler.SearchProfessions)).ServeHTTP,
 	})
 
 	// 职业详情
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/professions/:id",
-		Handler: professionHandler.GetProfessionByID,
+		Handler: optAuth(wrapFunc(professionHandler.GetProfessionByID)).ServeHTTP,
 	})
 }

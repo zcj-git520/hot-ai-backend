@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"hot-ai-backend/internal/access"
 	"hot-ai-backend/internal/models"
 	"hot-ai-backend/internal/repository"
 )
@@ -85,4 +86,45 @@ func (s *ToolService) convertTagIDsToNames(tagIDs []string) []string {
 		}
 	}
 	return names
+}
+
+// ToolView 工具详情响应 (含 access 决策)
+type ToolView struct {
+	*models.Tool
+	IsLocked          bool                    `json:"is_locked"`
+	RequiredLevel     int                     `json:"required_level,omitempty"`
+	RequiredLevelName string                  `json:"required_level_name,omitempty"`
+	Locked            *access.LockedContent   `json:"locked,omitempty"`
+}
+
+// ToToolView 把 Tool 包成 view，根据 userLevel 算 access
+func ToToolView(t *models.Tool, userLevel int) *ToolView {
+	v := &ToolView{Tool: t}
+	decision := access.Decide(userLevel, t.AccessLevel)
+	v.IsLocked = !decision.Allow
+	if !decision.Allow {
+		v.RequiredLevel = t.AccessLevel
+		v.RequiredLevelName = access.LevelName(t.AccessLevel)
+		preview, _ := access.TruncateContent(t.Description, access.GuestPreviewChars)
+		t.Description = preview
+		lp := access.LockedPlaceholder("工具", t.AccessLevel)
+		v.Locked = &lp
+	}
+	return v
+}
+
+// ToolListView 给列表里每条工具打 is_locked 标签
+func ToolListView(tools []models.Tool, userLevel int) []ToolView {
+	out := make([]ToolView, 0, len(tools))
+	for i := range tools {
+		v := ToolView{Tool: &tools[i]}
+		decision := access.Decide(userLevel, tools[i].AccessLevel)
+		v.IsLocked = !decision.Allow
+		if !decision.Allow {
+			v.RequiredLevel = tools[i].AccessLevel
+			v.RequiredLevelName = access.LevelName(tools[i].AccessLevel)
+		}
+		out = append(out, v)
+	}
+	return out
 }

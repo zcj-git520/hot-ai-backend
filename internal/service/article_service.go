@@ -1,6 +1,7 @@
 package service
 
 import (
+	"hot-ai-backend/internal/access"
 	"hot-ai-backend/internal/models"
 	"hot-ai-backend/internal/repository"
 	"strconv"
@@ -90,4 +91,46 @@ func (s *ArticleService) GetCategories() ([]models.Category, error) {
 // GetArticleCount 获取文章总数
 func (s *ArticleService) GetArticleCount() (int64, error) {
 	return s.articleRepo.GetCount()
+}
+
+// ArticleView 文章详情响应 (含 access 决策结果)
+type ArticleView struct {
+	*models.Article
+	IsLocked          bool                `json:"is_locked"`
+	RequiredLevel     int                 `json:"required_level,omitempty"`
+	RequiredLevelName string              `json:"required_level_name,omitempty"`
+	Locked            *access.LockedContent `json:"locked,omitempty"`
+}
+
+// ToView 把 article 包成 view，根据 userLevel 算 access
+func ToView(a *models.Article, userLevel int) *ArticleView {
+	v := &ArticleView{Article: a}
+	decision := access.Decide(userLevel, a.AccessLevel)
+	v.IsLocked = !decision.Allow
+	if !decision.Allow {
+		v.RequiredLevel = a.AccessLevel
+		v.RequiredLevelName = access.LevelName(a.AccessLevel)
+		// 详情场景：不够级别时裁剪正文，给游客看 500 字预览
+		preview, _ := access.TruncateContent(a.Content, access.GuestPreviewChars)
+		a.Content = preview
+		lp := access.LockedPlaceholder("文章", a.AccessLevel)
+		v.Locked = &lp
+	}
+	return v
+}
+
+// ToViewList 给列表里每篇打 is_locked 标签
+func ToViewList(articles []models.Article, userLevel int) []ArticleView {
+	out := make([]ArticleView, 0, len(articles))
+	for i := range articles {
+		v := ArticleView{Article: &articles[i]}
+		decision := access.Decide(userLevel, articles[i].AccessLevel)
+		v.IsLocked = !decision.Allow
+		if !decision.Allow {
+			v.RequiredLevel = articles[i].AccessLevel
+			v.RequiredLevelName = access.LevelName(articles[i].AccessLevel)
+		}
+		out = append(out, v)
+	}
+	return out
 }

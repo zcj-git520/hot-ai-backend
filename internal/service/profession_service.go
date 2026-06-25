@@ -1,6 +1,7 @@
 package service
 
 import (
+	"hot-ai-backend/internal/access"
 	"hot-ai-backend/internal/models"
 	"hot-ai-backend/internal/repository"
 	"strconv"
@@ -30,7 +31,7 @@ type GetProfessionsRequest struct {
 
 // GetProfessionsResponse 获取职业列表响应
 type GetProfessionsResponse struct {
-	Professions []models.Profession `json:"professions"`
+	Professions []ProfessionView    `json:"professions"`
 	Total       int64               `json:"total"`
 	TotalPages  int                 `json:"total_pages"`
 	Page        int                 `json:"page"`
@@ -57,8 +58,9 @@ func (s *ProfessionService) GetProfessions(page, pageSize int, categoryID uint, 
 		totalPages++
 	}
 
+	// 默认 level=0，handler 会用 ctx 里的 level 重新算并覆盖
 	return &GetProfessionsResponse{
-		Professions: professions,
+		Professions: ProfessionListView(professions, 0),
 		Total:       total,
 		TotalPages:  totalPages,
 		Page:        page,
@@ -200,7 +202,7 @@ func (s *ProfessionService) SearchProfessions(keyword string, page, pageSize int
 	}
 
 	return &GetProfessionsResponse{
-		Professions: professions,
+		Professions: ProfessionListView(professions, 0),
 		Total:       total,
 		TotalPages:  totalPages,
 		Page:        page,
@@ -226,4 +228,49 @@ func (s *ProfessionService) GetFeatured(limit int) ([]models.Profession, error) 
 // GetProfessionCount 获取职业总数
 func (s *ProfessionService) GetProfessionCount() (int64, error) {
 	return s.professionRepo.GetProfessionCount()
+}
+
+// ProfessionView 职业详情响应 (含 access 决策)
+type ProfessionView struct {
+	*models.Profession
+	IsLocked          bool                  `json:"is_locked"`
+	RequiredLevel     int                   `json:"required_level,omitempty"`
+	RequiredLevelName string                `json:"required_level_name,omitempty"`
+	Locked            *access.LockedContent `json:"locked,omitempty"`
+}
+
+// ToProfessionView 把 Profession 包成 view，根据 userLevel 算 access
+func ToProfessionView(p *models.Profession, userLevel int) *ProfessionView {
+	v := &ProfessionView{Profession: p}
+	decision := access.Decide(userLevel, p.AccessLevel)
+	v.IsLocked = !decision.Allow
+	if !decision.Allow {
+		v.RequiredLevel = p.AccessLevel
+		v.RequiredLevelName = access.LevelName(p.AccessLevel)
+		preview, _ := access.TruncateContent(p.Description, access.GuestPreviewChars)
+		p.Description = preview
+		// 锁定时也清空子结构（影响分析、转型建议）
+		p.ImpactAnalysis = nil
+		p.TransitionAdvice = nil
+		p.MarketData = nil
+		lp := access.LockedPlaceholder("职业", p.AccessLevel)
+		v.Locked = &lp
+	}
+	return v
+}
+
+// ProfessionListView 给列表里每条职业打 is_locked 标签
+func ProfessionListView(professions []models.Profession, userLevel int) []ProfessionView {
+	out := make([]ProfessionView, 0, len(professions))
+	for i := range professions {
+		v := ProfessionView{Profession: &professions[i]}
+		decision := access.Decide(userLevel, professions[i].AccessLevel)
+		v.IsLocked = !decision.Allow
+		if !decision.Allow {
+			v.RequiredLevel = professions[i].AccessLevel
+			v.RequiredLevelName = access.LevelName(professions[i].AccessLevel)
+		}
+		out = append(out, v)
+	}
+	return out
 }

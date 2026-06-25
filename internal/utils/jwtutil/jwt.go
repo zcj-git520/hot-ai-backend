@@ -13,6 +13,7 @@ import (
 type Claims struct {
 	UserID string   `json:"user_id"`
 	Roles  []string `json:"roles"`
+	Level  int      `json:"level"` // 0=游客, 1=普通用户, 2=会员
 	jwt.RegisteredClaims
 }
 
@@ -32,13 +33,14 @@ type TokenPair struct {
 }
 
 // GenerateTokenPair 生成 Access Token 和 Refresh Token
-func GenerateTokenPair(cfg Config, userID string, roles []string) (*TokenPair, error) {
+func GenerateTokenPair(cfg Config, userID string, roles []string, level int) (*TokenPair, error) {
 	now := time.Now()
 
 	// 生成 Access Token
 	accessClaims := &Claims{
 		UserID: userID,
 		Roles:  roles,
+		Level:  level,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(cfg.AccessExpire)),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -54,9 +56,11 @@ func GenerateTokenPair(cfg Config, userID string, roles []string) (*TokenPair, e
 		return nil, err
 	}
 
-	// 生成 Refresh Token
+	// 生成 Refresh Token (不携带 level，下次刷新时重新计算)
 	refreshClaims := &Claims{
 		UserID: userID,
+		Roles:  roles,
+		Level:  0,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(cfg.RefreshExpire)),
 			IssuedAt:  jwt.NewNumericDate(now),

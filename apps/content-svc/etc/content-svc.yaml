@@ -21,3 +21,8 @@ Log:
   Path: logs/content-svc.log
   Level: info
   Encoding: json
+
+# JWT 配置 (用于中间件解析 token，决定访问级别)
+Auth:
+  AccessSecret: your-secret-key-change-in-production
+  AccessExpire: 86400

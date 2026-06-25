@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"hot-ai-backend/internal/middleware"
 	"hot-ai-backend/internal/service"
 	"hot-ai-backend/internal/types"
 
@@ -43,6 +44,7 @@ func getPathValue(r *http.Request, name string) string {
 
 // GetLearningPaths 获取学习路径列表
 func (h *LearningPathHandler) GetLearningPaths(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	page := 1
 	pageSize := 12
 
@@ -63,60 +65,77 @@ func (h *LearningPathHandler) GetLearningPaths(w http.ResponseWriter, r *http.Re
 		Search:     search,
 	})
 	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, err)
+		httpx.ErrorCtx(ctx, w, err)
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, types.Success(resp))
+	// Apply access control based on user level
+	userLevel := middleware.GetUserLevelFromContext(ctx)
+	views := service.LearningPathListView(resp.List, userLevel)
+
+	httpx.OkJsonCtx(ctx, w, types.Success(map[string]interface{}{
+		"list":  views,
+		"total": resp.Total,
+		"page":  resp.Page,
+	}))
 }
 
 // GetLearningPathByID 根据ID获取学习路径详情
 func (h *LearningPathHandler) GetLearningPathByID(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	idStr := getPathValue(r, "id")
 	if idStr == "" {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
+		httpx.ErrorCtx(ctx, w, fmt.Errorf("缺少路径ID"))
 		return
 	}
 
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("无效的路径ID"))
+		httpx.ErrorCtx(ctx, w, fmt.Errorf("无效的路径ID"))
 		return
 	}
 
 	path, err := h.learningPathService.GetLearningPathByID(uint(id))
 	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, err)
+		httpx.ErrorCtx(ctx, w, err)
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, types.Success(path))
+	userLevel := middleware.GetUserLevelFromContext(ctx)
+	view := service.ToLearningPathView(path, userLevel)
+
+	httpx.OkJsonCtx(ctx, w, types.Success(view))
 }
 
 // GetLearningPathBySlug 根据slug获取学习路径详情
 func (h *LearningPathHandler) GetLearningPathBySlug(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	slug := getPathValue(r, "slug")
 	if slug == "" {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径slug"))
+		httpx.ErrorCtx(ctx, w, fmt.Errorf("缺少路径slug"))
 		return
 	}
 
 	path, err := h.learningPathService.GetLearningPathBySlug(slug)
 	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, err)
+		httpx.ErrorCtx(ctx, w, err)
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, types.Success(path))
+	userLevel := middleware.GetUserLevelFromContext(ctx)
+	view := service.ToLearningPathView(path, userLevel)
+
+	httpx.OkJsonCtx(ctx, w, types.Success(view))
 }
 
 // GetPathChapters 获取路径的所有章节
 func (h *LearningPathHandler) GetPathChapters(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	// 从 URL path 中提取 path_id
 	// URL 格式: /api/learning-paths/{path_id}/chapters
 	path := r.URL.Path
 	var pathIDStr string
-	
+
 	// 移除前缀 /api/learning-paths/
 	prefix := "/api/learning-paths/"
 	if len(path) > len(prefix) && path[:len(prefix)] == prefix {
@@ -133,74 +152,96 @@ func (h *LearningPathHandler) GetPathChapters(w http.ResponseWriter, r *http.Req
 			pathIDStr = remaining
 		}
 	}
-	
+
 	if pathIDStr == "" {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
+		httpx.ErrorCtx(ctx, w, fmt.Errorf("缺少路径ID"))
 		return
 	}
 
 	pathID, err := strconv.ParseUint(pathIDStr, 10, 32)
 	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("无效的路径ID"))
+		httpx.ErrorCtx(ctx, w, fmt.Errorf("无效的路径ID"))
 		return
 	}
 
 	chapters, err := h.learningPathService.GetPathChapters(uint(pathID))
 	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, err)
+		httpx.ErrorCtx(ctx, w, err)
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, types.Success(chapters))
+	// 获取父路径的 access level，章节 effective = max(父, 子)
+	var pathAccessLevel int
+	if path, perr := h.learningPathService.GetLearningPathByID(uint(pathID)); perr == nil && path != nil {
+		pathAccessLevel = path.AccessLevel
+	}
+
+	// Apply access control based on user level
+	userLevel := middleware.GetUserLevelFromContext(ctx)
+	views := service.PathChapterListView(chapters, userLevel, pathAccessLevel)
+
+	httpx.OkJsonCtx(ctx, w, types.Success(views))
 }
 
 // GetChapterByID 根据章节ID获取详情
 func (h *LearningPathHandler) GetChapterByID(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	chapterIDStr := getPathValue(r, "chapter_id")
 	if chapterIDStr == "" {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少章节ID"))
+		httpx.ErrorCtx(ctx, w, fmt.Errorf("缺少章节ID"))
 		return
 	}
 
 	chapterID, err := strconv.ParseUint(chapterIDStr, 10, 32)
 	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("无效的章节ID"))
+		httpx.ErrorCtx(ctx, w, fmt.Errorf("无效的章节ID"))
 		return
 	}
 
 	chapter, err := h.learningPathService.GetChapterByID(uint(chapterID))
 	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, err)
+		httpx.ErrorCtx(ctx, w, err)
 		return
 	}
 
 	// 获取前一章和下一章
 	prev, next, _ := h.learningPathService.GetPrevNextChapter(chapter.PathID, uint(chapterID))
 
+	// 获取父路径的 access level
+	var pathAccessLevel int
+	if path, perr := h.learningPathService.GetLearningPathByID(chapter.PathID); perr == nil && path != nil {
+		pathAccessLevel = path.AccessLevel
+	}
+
+	// Apply access control based on user level
+	userLevel := middleware.GetUserLevelFromContext(ctx)
+	chapterView := service.ToPathChapterView(chapter, userLevel, pathAccessLevel)
+
 	result := map[string]interface{}{
-		"chapter": chapter,
+		"chapter": chapterView,
 		"prev":    prev,
 		"next":    next,
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, types.Success(result))
+	httpx.OkJsonCtx(ctx, w, types.Success(result))
 }
 
 // GetChapterBySlug 根据路径slug和章节slug获取章节详情
 func (h *LearningPathHandler) GetChapterBySlug(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	pathSlug := getPathValue(r, "path_slug")
 	chapterSlug := getPathValue(r, "chapter_slug")
 	pathIDStr := r.URL.Query().Get("path_id")
 
 	if pathSlug == "" || chapterSlug == "" {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径slug或章节slug"))
+		httpx.ErrorCtx(ctx, w, fmt.Errorf("缺少路径slug或章节slug"))
 		return
 	}
 
 	// 获取路径信息
 	path, err := h.learningPathService.GetLearningPathBySlug(pathSlug)
 	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("路径不存在"))
+		httpx.ErrorCtx(ctx, w, fmt.Errorf("路径不存在"))
 		return
 	}
 
@@ -214,24 +255,35 @@ func (h *LearningPathHandler) GetChapterBySlug(w http.ResponseWriter, r *http.Re
 
 	chapter, err := h.learningPathService.GetChapterBySlug(pathID, chapterSlug)
 	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, err)
+		httpx.ErrorCtx(ctx, w, err)
 		return
 	}
 
 	// 获取前一章和下一章
 	prev, next, _ := h.learningPathService.GetPrevNextChapter(pathID, chapter.ID)
 
+	// 获取父路径的 access level
+	var pathAccessLevel int
+	if path, perr := h.learningPathService.GetLearningPathByID(pathID); perr == nil && path != nil {
+		pathAccessLevel = path.AccessLevel
+	}
+
+	// Apply access control based on user level
+	userLevel := middleware.GetUserLevelFromContext(ctx)
+	chapterView := service.ToPathChapterView(chapter, userLevel, pathAccessLevel)
+
 	result := map[string]interface{}{
-		"chapter": chapter,
+		"chapter": chapterView,
 		"prev":    prev,
 		"next":    next,
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, types.Success(result))
+	httpx.OkJsonCtx(ctx, w, types.Success(result))
 }
 
 // GetFeaturedPaths 获取推荐路径
 func (h *LearningPathHandler) GetFeaturedPaths(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	limit := 4
 	if l := r.URL.Query().Get("limit"); l != "" {
 		fmt.Sscanf(l, "%d", &limit)
@@ -239,11 +291,15 @@ func (h *LearningPathHandler) GetFeaturedPaths(w http.ResponseWriter, r *http.Re
 
 	paths, err := h.learningPathService.GetFeaturedPaths(limit)
 	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, err)
+		httpx.ErrorCtx(ctx, w, err)
 		return
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, types.Success(paths))
+	// Apply access control based on user level
+	userLevel := middleware.GetUserLevelFromContext(ctx)
+	views := service.LearningPathListView(paths, userLevel)
+
+	httpx.OkJsonCtx(ctx, w, types.Success(views))
 }
 
 // GetLevelInfo 获取难度等级信息
@@ -325,31 +381,32 @@ func (h *LearningPathHandler) SaveProgress(w http.ResponseWriter, r *http.Reques
 
 // GetPathDashboard 获取路径学习仪表盘（综合统计）
 func (h *LearningPathHandler) GetPathDashboard(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	userID := r.URL.Query().Get("user_id")
 	pathIDStr := r.URL.Query().Get("path_id")
 
 	if pathIDStr == "" {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("缺少路径ID"))
+		httpx.ErrorCtx(ctx, w, fmt.Errorf("缺少路径ID"))
 		return
 	}
 
 	pathID, err := strconv.ParseUint(pathIDStr, 10, 32)
 	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, fmt.Errorf("无效的路径ID"))
+		httpx.ErrorCtx(ctx, w, fmt.Errorf("无效的路径ID"))
 		return
 	}
 
 	// 获取路径信息
 	path, err := h.learningPathService.GetLearningPathByID(uint(pathID))
 	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, err)
+		httpx.ErrorCtx(ctx, w, err)
 		return
 	}
 
 	// 获取章节列表
 	chapters, err := h.learningPathService.GetPathChapters(uint(pathID))
 	if err != nil {
-		httpx.ErrorCtx(r.Context(), w, err)
+		httpx.ErrorCtx(ctx, w, err)
 		return
 	}
 
@@ -359,9 +416,14 @@ func (h *LearningPathHandler) GetPathDashboard(w http.ResponseWriter, r *http.Re
 		completedChapters = []uint{}
 	}
 
-	httpx.OkJsonCtx(r.Context(), w, types.Success(map[string]interface{}{
-		"path":               path,
-		"chapters":           chapters,
+	// Apply access control based on user level
+	userLevel := middleware.GetUserLevelFromContext(ctx)
+	pathView := service.ToLearningPathView(path, userLevel)
+	chapterViews := service.PathChapterListView(chapters, userLevel)
+
+	httpx.OkJsonCtx(ctx, w, types.Success(map[string]interface{}{
+		"path":               pathView,
+		"chapters":           chapterViews,
 		"completed_chapters": completedChapters,
 		"progress": map[string]interface{}{
 			"total_chapters":      len(chapters),

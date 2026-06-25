@@ -50,6 +50,9 @@ type Tool struct {
 	SubmittedAt     time.Time `json:"submitted_at"`     // 提交时间
 	SubmittedBy     string    `json:"submitted_by"`     // 申请人
 	RevisionReason  string    `json:"revision_reason"`  // 退回原因
+
+	// 权限相关字段
+	AccessLevel     int       `json:"access_level"`     // 0=游客, 1=普通用户, 2=会员
 }
 
 // ToolReview 用户评测

@@ -81,6 +81,7 @@ func registerRoutes(server *rest.Server, adminService *service.AdminService, pro
 	toolReviewHandler := handler.NewAdminToolReviewHandler()
 	articleReviewHandler := handler.NewAdminArticleReviewHandler()
 	userHandler := handler.NewUserHandler(userService)
+	accessLevelHandler := handler.NewAdminAccessLevelHandler()
 
 	// ===== 学习路径管理 =====
 	server.AddRoute(rest.Route{
@@ -351,5 +352,18 @@ func registerRoutes(server *rest.Server, adminService *service.AdminService, pro
 		Method:  http.MethodPut,
 		Path:    "/api/admin/users/:id/password",
 		Handler: userHandler.UpdatePassword,
+	})
+
+	// ===== 访问级别管理 =====
+	server.AddRoute(rest.Route{
+		Method:  http.MethodPut,
+		Path:    "/api/admin/content/access-level",
+		Handler: accessLevelHandler.SetAccessLevel,
+	})
+
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/api/admin/content/access-level",
+		Handler: accessLevelHandler.GetAccessLevel,
 	})
 }

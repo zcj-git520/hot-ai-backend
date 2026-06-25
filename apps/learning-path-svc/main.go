@@ -11,6 +11,7 @@ import (
 	"github.com/zeromicro/go-zero/rest"
 
 	"hot-ai-backend/internal/database"
+	"hot-ai-backend/internal/middleware"
 	"hot-ai-backend/internal/repository"
 	"hot-ai-backend/internal/service"
 )
@@ -25,6 +26,11 @@ type LearningPathSvcConf struct {
 		MySQL struct {
 			DSN string `json:",optional"`
 		}
+	}
+	// JWT 配置
+	Auth struct {
+		AccessSecret string `json:",default=your-secret-key-change-in-production"`
+		AccessExpire int    `json:",default=86400"`
 	}
 }
 
@@ -67,51 +73,59 @@ func main() {
 	learningPathService := service.NewLearningPathService(learningPathRepo)
 
 	// 注册路由
-	registerRoutes(server, learningPathService)
+	registerRoutes(server, c.Auth.AccessSecret, learningPathService)
 
 	fmt.Printf("Starting learning-path-svc at %s:%d...\n", c.Host, c.Port)
 	server.Start()
 }
 
 // registerRoutes 注册路由
-func registerRoutes(server *rest.Server, learningPathService *service.LearningPathService) {
+func registerRoutes(server *rest.Server, jwtSecret string, learningPathService *service.LearningPathService) {
 	// 创建处理器
 	learningPathHandler := handler.NewLearningPathHandler(learningPathService)
+
+	// OptionalAuth 中间件
+	optAuth := middleware.OptionalAuth(jwtSecret)
+	wrapFunc := func(h func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			h(w, r)
+		}
+	}
 
 	// ===== 学习路径路由 =====
 	// 获取路径列表
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/learning-paths",
-		Handler: learningPathHandler.GetLearningPaths,
+		Handler: optAuth(wrapFunc(learningPathHandler.GetLearningPaths)).ServeHTTP,
 	})
 
 	// 根据ID获取路径详情
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/learning-paths/:id",
-		Handler: learningPathHandler.GetLearningPathByID,
+		Handler: optAuth(wrapFunc(learningPathHandler.GetLearningPathByID)).ServeHTTP,
 	})
 
 	// 根据slug获取路径详情
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/learning-paths/slug/:slug",
-		Handler: learningPathHandler.GetLearningPathBySlug,
+		Handler: optAuth(wrapFunc(learningPathHandler.GetLearningPathBySlug)).ServeHTTP,
 	})
 
 	// 获取推荐路径
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/learning-paths/featured",
-		Handler: learningPathHandler.GetFeaturedPaths,
+		Handler: optAuth(wrapFunc(learningPathHandler.GetFeaturedPaths)).ServeHTTP,
 	})
 
 	// 获取难度等级信息
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/learning-paths/levels",
-		Handler: learningPathHandler.GetLevelInfo,
+		Handler: optAuth(wrapFunc(learningPathHandler.GetLevelInfo)).ServeHTTP,
 	})
 
 	// ===== 章线路由 =====
@@ -119,49 +133,49 @@ func registerRoutes(server *rest.Server, learningPathService *service.LearningPa
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/learning-paths/:path_id/chapters",
-		Handler: learningPathHandler.GetPathChapters,
+		Handler: optAuth(wrapFunc(learningPathHandler.GetPathChapters)).ServeHTTP,
 	})
 
 	// 根据章节ID获取详情
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/learning-paths/chapters/:chapter_id",
-		Handler: learningPathHandler.GetChapterByID,
+		Handler: optAuth(wrapFunc(learningPathHandler.GetChapterByID)).ServeHTTP,
 	})
 
 	// 根据路径slug和章节slug获取章节详情
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/learning-paths/:path_slug/:chapter_slug",
-		Handler: learningPathHandler.GetChapterBySlug,
+		Handler: optAuth(wrapFunc(learningPathHandler.GetChapterBySlug)).ServeHTTP,
 	})
 
-	// ===== 学习进度路由 =====
+	// ===== 学习进度路由 (需要登录) =====
 	// 获取用户的学习进度
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/learning-paths/progress",
-		Handler: learningPathHandler.GetPathProgress,
+		Handler: optAuth(wrapFunc(learningPathHandler.GetPathProgress)).ServeHTTP,
 	})
 
 	// 获取用户已完成的章节列表
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/learning-paths/completed-chapters",
-		Handler: learningPathHandler.GetCompletedChapters,
+		Handler: optAuth(wrapFunc(learningPathHandler.GetCompletedChapters)).ServeHTTP,
 	})
 
 	// 保存学习进度
 	server.AddRoute(rest.Route{
 		Method:  http.MethodPost,
 		Path:    "/api/learning-paths/progress",
-		Handler: learningPathHandler.SaveProgress,
+		Handler: optAuth(wrapFunc(learningPathHandler.SaveProgress)).ServeHTTP,
 	})
 
 	// 获取路径学习仪表盘
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/learning-paths/dashboard",
-		Handler: learningPathHandler.GetPathDashboard,
+		Handler: optAuth(wrapFunc(learningPathHandler.GetPathDashboard)).ServeHTTP,
 	})
 }

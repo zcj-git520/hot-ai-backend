@@ -10,6 +10,7 @@ import (
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/rest"
 	"hot-ai-backend/internal/database"
+	"hot-ai-backend/internal/middleware"
 	"hot-ai-backend/internal/repository"
 	"hot-ai-backend/internal/service"
 )
@@ -24,6 +25,11 @@ type ToolSvcConf struct {
 		MySQL struct {
 			DSN string `json:",optional"`
 		}
+	}
+	// JWT 配置
+	Auth struct {
+		AccessSecret string `json:",default=your-secret-key-change-in-production"`
+		AccessExpire int    `json:",default=86400"`
 	}
 }
 
@@ -71,43 +77,51 @@ func main() {
 	toolService := service.NewToolService(toolRepo)
 
 	// 注册路由
-	registerRoutes(server, toolService)
+	registerRoutes(server, c.Auth.AccessSecret, toolService)
 
 	fmt.Printf("Starting tool-svc at %s:%d...\n", c.Host, c.Port)
 	server.Start()
 }
 
 // registerRoutes 注册路由
-func registerRoutes(server *rest.Server, toolService *service.ToolService) {
+func registerRoutes(server *rest.Server, jwtSecret string, toolService *service.ToolService) {
 	// 创建处理器
 	toolHandler := handler.NewToolServiceHandler(toolService)
+
+	// OptionalAuth 中间件
+	optAuth := middleware.OptionalAuth(jwtSecret)
+	wrapFunc := func(h func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			h(w, r)
+		}
+	}
 
 	// ===== 工具路由 =====
 	// 工具类别
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/tools/categories",
-		Handler: toolHandler.ToolCategories,
+		Handler: optAuth(wrapFunc(toolHandler.ToolCategories)).ServeHTTP,
 	})
 
 	// 工具列表
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/tools",
-		Handler: toolHandler.ToolList,
+		Handler: optAuth(wrapFunc(toolHandler.ToolList)).ServeHTTP,
 	})
 
 	// 工具详情（通过slug）
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/tools/:slug",
-		Handler: toolHandler.ToolDetail,
+		Handler: optAuth(wrapFunc(toolHandler.ToolDetail)).ServeHTTP,
 	})
 
 	// 工具详情（通过id）
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/tools/id/:id",
-		Handler: toolHandler.ToolDetailByID,
+		Handler: optAuth(wrapFunc(toolHandler.ToolDetailByID)).ServeHTTP,
 	})
 }

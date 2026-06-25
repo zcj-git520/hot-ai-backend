@@ -20,6 +20,8 @@ type User struct {
 	LastLoginAt   *time.Time             `gorm:"column:last_login_at" json:"last_login_at,omitempty"`
 	LastLoginIP   string                 `gorm:"column:last_login_ip;type:varchar(45)" json:"last_login_ip,omitempty"`
 	Preferences   UserPreferences        `gorm:"column:preferences;type:json" json:"preferences"`
+	IsMember      bool                   `gorm:"column:is_member;type:tinyint(1);not null;default:0;index:idx_is_member" json:"is_member"`
+	MemberExpireAt *time.Time            `gorm:"column:member_expire_at" json:"member_expire_at,omitempty"`
 	CreatedAt     time.Time              `gorm:"column:created_at;autoCreateTime" json:"created_at"`
 	UpdatedAt     time.Time              `gorm:"column:updated_at;autoUpdateTime" json:"updated_at"`
 }

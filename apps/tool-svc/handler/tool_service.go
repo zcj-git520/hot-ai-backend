@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/zeromicro/go-zero/rest/httpx"
+	"hot-ai-backend/internal/middleware"
 	"hot-ai-backend/internal/service"
 	"hot-ai-backend/internal/types"
 )
@@ -102,9 +103,13 @@ func (h *ToolServiceHandler) ToolList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Apply access control based on user level
+	userLevel := middleware.GetUserLevelFromContext(ctx)
+	views := service.ToolListView(tools, userLevel)
+
 	// 返回数据
 	result := map[string]interface{}{
-		"list":      tools,
+		"list":      views,
 		"total":     total,
 		"page":      params["page"],
 		"page_size": params["page_size"],
@@ -142,7 +147,9 @@ func (h *ToolServiceHandler) ToolDetail(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	httpx.OkJsonCtx(ctx, w, types.Success(tool))
+	userLevel := middleware.GetUserLevelFromContext(ctx)
+	view := service.ToToolView(tool, userLevel)
+	httpx.OkJsonCtx(ctx, w, types.Success(view))
 }
 
 // ToolDetailByID 工具详情（通过id）
@@ -180,5 +187,7 @@ func (h *ToolServiceHandler) ToolDetailByID(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	httpx.OkJsonCtx(ctx, w, types.Success(tool))
+	userLevel := middleware.GetUserLevelFromContext(ctx)
+	view := service.ToToolView(tool, userLevel)
+	httpx.OkJsonCtx(ctx, w, types.Success(view))
 }

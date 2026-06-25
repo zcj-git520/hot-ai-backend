@@ -11,6 +11,7 @@ import (
 
 	"hot-ai-backend/apps/content-svc/handler"
 	"hot-ai-backend/internal/database"
+	"hot-ai-backend/internal/middleware"
 	"hot-ai-backend/internal/repository"
 	"hot-ai-backend/internal/service"
 )
@@ -25,6 +26,11 @@ type ContentSvcConf struct {
 		MySQL struct {
 			DSN string `json:",optional"`
 		}
+	}
+	// JWT 配置
+	Auth struct {
+		AccessSecret string `json:",default=your-secret-key-change-in-production"`
+		AccessExpire int    `json:",default=86400"`
 	}
 }
 
@@ -66,34 +72,44 @@ func main() {
 	// 初始化服务层
 	articleService := service.NewArticleService(articleRepo)
 
-	// 注册路由
-	registerRoutes(server, articleService)
+	// 注册路由 (带 OptionalAuth 中间件，注入 user level 到 ctx)
+	registerRoutes(server, c.Auth.AccessSecret, articleService)
 
 	fmt.Printf("Starting content-svc at %s:%d...\n", c.Host, c.Port)
 	server.Start()
 }
 
 // registerRoutes 注册路由
-func registerRoutes(server *rest.Server, articleService *service.ArticleService) {
+func registerRoutes(server *rest.Server, jwtSecret string, articleService *service.ArticleService) {
 	// 创建处理器
 	articleHandler := handler.NewArticleHandler(articleService)
 
-	// ===== 文章路由 =====
+	// OptionalAuth 中间件：有 token 就解析注入 level，没 token 当 level=0 (游客)
+	optAuth := middleware.OptionalAuth(jwtSecret)
+
+	// wrapFunc 把 handler func 包成 http.Handler，中间件再包成 http.Handler
+	wrapFunc := func(h func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			h(w, r)
+		}
+	}
+
+	// ===== 文章路由 (公开，OptionalAuth 解析身份用于 access 决策) =====
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/articles",
-		Handler: articleHandler.GetArticles,
+		Handler: optAuth(wrapFunc(articleHandler.GetArticles)).ServeHTTP,
 	})
 
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/articles/categories",
-		Handler: articleHandler.GetCategories,
+		Handler: optAuth(wrapFunc(articleHandler.GetCategories)).ServeHTTP,
 	})
 
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
 		Path:    "/api/articles/:id",
-		Handler: articleHandler.GetArticleByID,
+		Handler: optAuth(wrapFunc(articleHandler.GetArticleByID)).ServeHTTP,
 	})
 }
