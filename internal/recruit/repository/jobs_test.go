@@ -75,3 +75,23 @@ func TestListJobsLimitCap(t *testing.T) {
 	// 通过单元测试覆盖默认 cap：调用方传 9999 仓库层应截断为 100
 	// 这条断言在 Step 3 实现后单独验证。
 }
+
+func TestGetJobsStats(t *testing.T) {
+	if database.DB == nil {
+		t.Skip("no DB")
+	}
+	repo := NewRawJobsRepo(database.DB)
+	stats, err := repo.GetJobsStats(7)
+	if err != nil {
+		t.Fatalf("stats: %v", err)
+	}
+	if len(stats.TopCompanies) == 0 {
+		t.Fatal("expected top_companies non-empty for profession 7")
+	}
+	if len(stats.SalaryDistribution) == 0 {
+		t.Fatal("expected salary_distribution non-empty")
+	}
+	if len(stats.AIKeywordsTop) == 0 {
+		t.Fatal("expected ai_keywords_top non-empty")
+	}
+}
