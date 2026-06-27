@@ -227,6 +227,10 @@ type ProfessionMarketData struct {
 	SupplyDemandRatio      float64   `gorm:"column:supply_demand_ratio;type:decimal(3,2)" json:"supply_demand_ratio,omitempty"`
 	DataSource             string    `gorm:"column:data_source;type:varchar(255)" json:"data_source,omitempty"`
 	DataUpdateDate         time.Time `gorm:"column:data_update_date;type:date" json:"data_update_date,omitempty"`
+	MarketConfidenceScore  *int      `gorm:"column:market_confidence_score" json:"market_confidence_score,omitempty"`
+	LastMetricsDate        *time.Time `gorm:"column:last_metrics_date" json:"last_metrics_date,omitempty"`
+	MetricWindow           string    `gorm:"column:metric_window" json:"metric_window,omitempty"`
+	DataFreshness          string    `gorm:"column:data_freshness" json:"data_freshness,omitempty"`
 	CreatedAt              time.Time `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt              time.Time `gorm:"column:updated_at" json:"updated_at"`
 }
