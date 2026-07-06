@@ -9,26 +9,29 @@ import (
 type Platform string
 
 const (
-	PlatformBoss    Platform = "boss"
-	PlatformZhilian Platform = "zhilian"
-	PlatformLiepin  Platform = "liepin"
+	PlatformBoss     Platform = "boss"
+	PlatformZhilian  Platform = "zhilian"
+	PlatformLiepin   Platform = "liepin"
+	PlatformJobicy   Platform = "jobicy"
+	PlatformRemotive Platform = "remotive"
 )
 
 // RawJob 原始岗位
 type RawJob struct {
-	ID            uint64    `gorm:"column:id;primaryKey;autoIncrement"`
-	Platform      Platform  `gorm:"column:platform;type:enum('boss','zhilian','liepin')"`
-	PlatformJobID string    `gorm:"column:platform_job_id"`
-	Title         string    `gorm:"column:title"`
-	Company       string    `gorm:"column:company"`
-	City          string    `gorm:"column:city"`
-	SalaryMin     *int      `gorm:"column:salary_min"`
-	SalaryMax     *int      `gorm:"column:salary_max"`
-	Description   string    `gorm:"column:description;type:text"`
-	Skills        []string  `gorm:"column:skills;type:json"`
-	Industry      string    `gorm:"column:industry"`
-	URL           string    `gorm:"column:url"`
-	CrawledAt     time.Time `gorm:"column:crawled_at"`
+	ID             uint64    `gorm:"column:id;primaryKey;autoIncrement"`
+	Platform       Platform  `gorm:"column:platform;type:enum('boss','zhilian','liepin','jobicy','remotive')"`
+	PlatformJobID  string    `gorm:"column:platform_job_id"`
+	Title          string    `gorm:"column:title"`
+	Company        string    `gorm:"column:company"`
+	City           string    `gorm:"column:city"`
+	SalaryMin      *int      `gorm:"column:salary_min"`
+	SalaryMax      *int      `gorm:"column:salary_max"`
+	SalaryCurrency *string   `gorm:"column:salary_currency"`
+	Description    string    `gorm:"column:description;type:text"`
+	Skills         []string  `gorm:"column:skills;type:json"`
+	Industry       string    `gorm:"column:industry"`
+	URL            string    `gorm:"column:url"`
+	CrawledAt      time.Time `gorm:"column:crawled_at"`
 }
 
 func (RawJob) TableName() string { return "recruit_raw_jobs" }
@@ -78,7 +81,7 @@ func (Keyword) TableName() string { return "recruit_keywords" }
 // CrawlLog 抓取日志
 type CrawlLog struct {
 	ID           uint64     `gorm:"column:id;primaryKey;autoIncrement"`
-	Platform     Platform   `gorm:"column:platform;type:enum('boss','zhilian','liepin')"`
+	Platform     Platform   `gorm:"column:platform;type:enum('boss','zhilian','liepin','jobicy','remotive')"`
 	StartedAt    time.Time  `gorm:"column:started_at"`
 	FinishedAt   *time.Time `gorm:"column:finished_at"`
 	Status       string     `gorm:"column:status;type:enum('success','partial','failed')"`

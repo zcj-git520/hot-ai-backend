@@ -184,6 +184,21 @@ func (r *ProfessionRepository) GetFeatured(limit int) ([]models.Profession, erro
 	return professions, nil
 }
 
+// GetFeaturedAll 获取全部职业（速览首页用），按 risk_score DESC 排序
+func (r *ProfessionRepository) GetFeaturedAll() ([]models.Profession, error) {
+	var professions []models.Profession
+	if err := database.GetDB().Model(&models.Profession{}).
+		Where("status = ?", 1).
+		Order("risk_score DESC, sort_order ASC, id ASC").
+		Find(&professions).Error; err != nil {
+		return nil, err
+	}
+	for i := range professions {
+		r.fillProfessionData(&professions[i])
+	}
+	return professions, nil
+}
+
 // SearchByKeyword 根据关键词搜索职业（支持 FULLTEXT）
 func (r *ProfessionRepository) SearchByKeyword(keyword string, page, pageSize int) ([]models.Profession, int64, error) {
 	var professions []models.Profession

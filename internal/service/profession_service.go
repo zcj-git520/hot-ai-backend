@@ -230,6 +230,50 @@ func (s *ProfessionService) GetProfessionCount() (int64, error) {
 	return s.professionRepo.GetProfessionCount()
 }
 
+// ProfessionFeaturedView 速览卡片视图（精简字段）
+type ProfessionFeaturedView struct {
+	ID                uint                 `json:"id"`
+	Name              string               `json:"name"`
+	CategoryID        uint                 `json:"category_id,omitempty"`
+	RiskLevel         string               `json:"risk_level"`
+	RiskScore         int                  `json:"risk_score"`
+	AccessLevel       int                  `json:"access_level"`
+	IsLocked          bool                 `json:"is_locked"`
+	RequiredLevel     int                  `json:"required_level,omitempty"`
+	RequiredLevelName string               `json:"required_level_name,omitempty"`
+	ImpactSummary     string               `json:"impact_summary"`
+	ImpactTimeline    models.JSONStringMap `json:"impact_timeline"`
+}
+
+// ToProfessionFeaturedView 转换 Profession 为速览卡片视图
+func ToProfessionFeaturedView(p *models.Profession, userLevel int) *ProfessionFeaturedView {
+	v := &ProfessionFeaturedView{
+		ID:             p.ID,
+		Name:           p.Name,
+		CategoryID:     p.CategoryID,
+		RiskLevel:      p.RiskLevel,
+		RiskScore:      p.RiskScore,
+		AccessLevel:    p.AccessLevel,
+		ImpactTimeline: models.JSONStringMap{},
+	}
+	if p.ImpactAnalysis != nil {
+		v.ImpactSummary = p.ImpactAnalysis.ImpactSummary
+		v.ImpactTimeline = p.ImpactAnalysis.ImpactTimeline
+	}
+	decision := access.Decide(userLevel, p.AccessLevel)
+	v.IsLocked = !decision.Allow
+	if !decision.Allow {
+		v.RequiredLevel = p.AccessLevel
+		v.RequiredLevelName = access.LevelName(p.AccessLevel)
+	}
+	return v
+}
+
+// GetFeaturedAll 获取全部职业（速览用）
+func (s *ProfessionService) GetFeaturedAll() ([]models.Profession, error) {
+	return s.professionRepo.GetFeaturedAll()
+}
+
 // ProfessionView 职业详情响应 (含 access 决策)
 type ProfessionView struct {
 	*models.Profession

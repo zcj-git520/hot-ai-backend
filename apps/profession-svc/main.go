@@ -72,15 +72,18 @@ func main() {
 	// 初始化服务层
 	professionService := service.NewProfessionService(professionRepo)
 
+	// 初始化速览 handler
+	featuredHandler := handler.NewProfessionFeaturedHandler(professionService)
+
 	// 注册路由
-	registerRoutes(server, c.Auth.AccessSecret, professionService)
+	registerRoutes(server, c.Auth.AccessSecret, professionService, featuredHandler)
 
 	fmt.Printf("Starting profession-svc at %s:%d...\n", c.Host, c.Port)
 	server.Start()
 }
 
 // registerRoutes 注册路由
-func registerRoutes(server *rest.Server, jwtSecret string, professionService *service.ProfessionService) {
+func registerRoutes(server *rest.Server, jwtSecret string, professionService *service.ProfessionService, featuredHandler *handler.ProfessionFeaturedHandler) {
 	// 创建处理器
 	professionHandler := handler.NewProfessionHandler(professionService)
 
@@ -118,6 +121,13 @@ func registerRoutes(server *rest.Server, jwtSecret string, professionService *se
 		Method:  http.MethodGet,
 		Path:    "/api/professions/search",
 		Handler: optAuth(wrapFunc(professionHandler.SearchProfessions)).ServeHTTP,
+	})
+
+	// 速览首页 —— 必须在 :id 之前注册，否则 Go Zero 路由按注册顺序匹配会把 "featured" 当成 id
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/api/professions/featured",
+		Handler: optAuth(wrapFunc(featuredHandler.GetFeatured)).ServeHTTP,
 	})
 
 	// 职业详情

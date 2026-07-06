@@ -17,7 +17,7 @@ type RawJobsRepo struct {
 
 func NewRawJobsRepo(db *gorm.DB) *RawJobsRepo { return &RawJobsRepo{db: db} }
 
-// Upsert 插入或返回已存在行
+// Upsert 插入或返回已存在行；同时回填 job.ID 以便调用方拿到 raw_job_id
 func (r *RawJobsRepo) Upsert(job *recruit.RawJob) (uint64, error) {
 	var existingID uint64
 	err := r.db.Raw(
@@ -25,6 +25,7 @@ func (r *RawJobsRepo) Upsert(job *recruit.RawJob) (uint64, error) {
 		job.Platform, job.PlatformJobID,
 	).Scan(&existingID).Error
 	if err == nil && existingID > 0 {
+		job.ID = existingID
 		return existingID, nil
 	}
 	if err := r.db.Create(job).Error; err != nil {
@@ -49,6 +50,17 @@ type NormalizedJobsRepo struct {
 }
 
 func NewNormalizedJobsRepo(db *gorm.DB) *NormalizedJobsRepo { return &NormalizedJobsRepo{db: db} }
+
+// DeleteTodayByRawJobIDs 清除这些 raw_job_id 今天已归一的行，保证 pipeline 可重复执行不产生重复
+func (r *NormalizedJobsRepo) DeleteTodayByRawJobIDs(ids []uint64) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	return r.db.Exec(`
+		DELETE FROM recruit_normalized_jobs
+		WHERE normalized_at >= CURDATE() AND raw_job_id IN (?)
+	`, ids).Error
+}
 
 func (r *NormalizedJobsRepo) Insert(n *recruit.NormalizedJob) (uint64, error) {
 	hitsJSON, err := json.Marshal(n.AIKeywordHits)
@@ -186,6 +198,7 @@ type JobListItem struct {
 	City            string          `json:"city" gorm:"column:city"`
 	SalaryMin       *int            `json:"salary_min" gorm:"column:salary_min"`
 	SalaryMax       *int            `json:"salary_max" gorm:"column:salary_max"`
+	SalaryCurrency  *string         `json:"salary_currency" gorm:"column:salary_currency"`
 	Description     string          `json:"description" gorm:"column:description"`
 	URL             string          `json:"url" gorm:"column:url"`
 	Platform        string          `json:"platform" gorm:"column:platform"`
@@ -254,7 +267,7 @@ func (r *RawJobsRepo) ListJobs(p ListJobsParams) ([]JobListItem, int, error) {
 	var items []JobListItem
 	err := r.db.Raw(`
 		SELECT r.id, r.title, r.company, r.city, r.salary_min, r.salary_max,
-		       r.description, r.url, r.platform, r.crawled_at,
+		       r.salary_currency, r.description, r.url, r.platform, r.crawled_at,
 		       n.profession_id, n.ai_keywords_count, n.ai_keyword_hits
 		FROM recruit_normalized_jobs n
 		JOIN recruit_raw_jobs r ON r.id = n.raw_job_id
@@ -300,16 +313,17 @@ type KeywordCount struct {
 	Count   int    `json:"count"`
 }
 
+// salaryBuckets 年薪美元区间（数据源为 Jobicy/Remotive，均为 annual USD）
 var salaryBuckets = []struct {
 	Min, Max int
 	Label    string
 }{
-	{0, 10000, "<10k"},
-	{10000, 20000, "10-20k"},
-	{20000, 30000, "20-30k"},
-	{30000, 50000, "30-50k"},
-	{50000, 80000, "50-80k"},
-	{80000, 999999, "80k+"},
+	{0, 40000, "<$40k"},
+	{40000, 60000, "$40-60k"},
+	{60000, 80000, "$60-80k"},
+	{80000, 100000, "$80-100k"},
+	{100000, 150000, "$100-150k"},
+	{150000, 9999999, "$150k+"},
 }
 
 // GetJobsStats 返回指定 profession 的 4 维聚合
