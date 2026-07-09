@@ -46,6 +46,9 @@ func (r *LearningPathRepository) GetList(page, pageSize int, difficulty string, 
 		r.fillChapterCount(&paths[i])
 	}
 
+	// 批量填充管理数据（避免 N+1）
+	r.fillManagementDataBatch(paths)
+
 	return paths, total, nil
 }
 
@@ -58,6 +61,9 @@ func (r *LearningPathRepository) GetByID(id uint) (*models.LearningPath, error) 
 
 	// 填充章节
 	r.fillChapters(&path)
+
+	// 填充管理数据（view / start / complete / favorite 计数）
+	r.fillManagementData(&path)
 
 	// 增加访问量
 	_ = r.IncrementViewCount(id)
@@ -74,6 +80,9 @@ func (r *LearningPathRepository) GetBySlug(slug string) (*models.LearningPath, e
 
 	// 填充章节
 	r.fillChapters(&path)
+
+	// 填充管理数据
+	r.fillManagementData(&path)
 
 	// 增加访问量
 	_ = r.IncrementViewCount(path.ID)
@@ -165,6 +174,9 @@ func (r *LearningPathRepository) GetFeatured(limit int) ([]models.LearningPath, 
 	for i := range paths {
 		r.fillChapterCount(&paths[i])
 	}
+
+	// 批量填充管理数据
+	r.fillManagementDataBatch(paths)
 
 	return paths, nil
 }
@@ -273,6 +285,41 @@ func (r *LearningPathRepository) fillChapters(path *models.LearningPath) {
 		return
 	}
 	path.Chapters = chapters
+}
+
+// fillManagementData 填充路径管理数据（view / start / complete / favorite 计数）
+// 注意：rows.Err 在没有匹配行时不视为错误 —— 没管理数据的路径照样能展示
+func (r *LearningPathRepository) fillManagementData(path *models.LearningPath) {
+	var m models.LearningPathManagement
+	if err := database.GetDB().Where("path_id = ?", path.ID).First(&m).Error; err != nil {
+		return
+	}
+	path.ManagementData = &m
+}
+
+// fillManagementDataBatch 批量填充（避免 N+1）：用 IN 一次性查全部，按 path_id 关联
+func (r *LearningPathRepository) fillManagementDataBatch(paths []models.LearningPath) {
+	if len(paths) == 0 {
+		return
+	}
+	ids := make([]uint, len(paths))
+	for i, p := range paths {
+		ids[i] = p.ID
+	}
+	var rows []models.LearningPathManagement
+	if err := database.GetDB().Where("path_id IN ?", ids).Find(&rows).Error; err != nil {
+		return
+	}
+	byPath := make(map[uint]*models.LearningPathManagement, len(rows))
+	for i := range rows {
+		m := rows[i]
+		byPath[m.PathID] = &m
+	}
+	for i := range paths {
+		if m, ok := byPath[paths[i].ID]; ok {
+			paths[i].ManagementData = m
+		}
+	}
 }
 
 // GetLearningPathCount 获取学习路径总数
