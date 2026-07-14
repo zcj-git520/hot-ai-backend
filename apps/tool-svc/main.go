@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"hot-ai-backend/apps/tool-svc/handler"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/rest"
+	"hot-ai-backend/internal/access"
 	"hot-ai-backend/internal/database"
 	"hot-ai-backend/internal/middleware"
 	"hot-ai-backend/internal/repository"
@@ -30,6 +32,10 @@ type ToolSvcConf struct {
 	Auth struct {
 		AccessSecret string `json:",default=your-secret-key-change-in-production"`
 		AccessExpire int    `json:",default=86400"`
+	}
+	// 付费墙开关：true=按级别拦截（默认），false=全员可读完整内容
+	Paywall struct {
+		Enabled bool `json:",default=false"`
 	}
 }
 
@@ -73,6 +79,10 @@ func main() {
 	}
 	toolRepo := repository.NewToolRepository(sqlDB)
 
+	// 付费墙开关：true 按 level 拦截；false 全员可读完整内容
+	access.SetPaywallEnabled(c.Paywall.Enabled)
+	fmt.Printf("[config] paywall enabled=%v\n", access.PaywallEnabled())
+
 	// 初始化服务层
 	toolService := service.NewToolService(toolRepo)
 
@@ -88,8 +98,16 @@ func registerRoutes(server *rest.Server, jwtSecret string, toolService *service.
 	// 创建处理器
 	toolHandler := handler.NewToolServiceHandler(toolService)
 
-	// OptionalAuth 中间件
-	optAuth := middleware.OptionalAuth(jwtSecret)
+	// OptionalAuth 中间件：JWT level<2 时回查 DB 拿最新 level
+	userRepo := repository.NewUserRepository()
+	resolveLevel := func(ctx context.Context, userID string) int {
+		u, err := userRepo.GetByID(ctx, userID)
+		if err != nil || u == nil {
+			return 0
+		}
+		return access.ComputeLevel(u)
+	}
+	optAuth := middleware.OptionalAuth(jwtSecret, resolveLevel)
 	wrapFunc := func(h func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			h(w, r)

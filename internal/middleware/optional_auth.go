@@ -17,9 +17,18 @@ const (
 	CtxUserLevel ContextKey = "userLevel"
 )
 
+// LevelResolver 根据用户 ID 实时查询访问级别。
+// 返回值：
+//   - >0：使用此值覆盖 JWT 里的旧 level（用于处理「DB 里已是会员但 JWT 没刷新」的情况）
+//   - 0：忽略，沿用 JWT 的 level
+type LevelResolver func(ctx context.Context, userID string) int
+
 // OptionalAuth 有 token 就解析 + 塞 ctx；没有或非法就当匿名（level=0）
 // 不像 AuthMiddleware 那样 reject —— 业务接口要的就是「匿名也能进」
-func OptionalAuth(jwtSecret string) func(http.Handler) http.Handler {
+//
+// resolve 可为 nil；非 nil 时，当 JWT 里 level < 2 且能拿到 userID，
+// 会回调一次 resolver 拿真实 level（处理用户升级会员后没重新登录导致 JWT level 过期的场景）。
+func OptionalAuth(jwtSecret string, resolve LevelResolver) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			level := 0
@@ -34,6 +43,14 @@ func OptionalAuth(jwtSecret string) func(http.Handler) http.Handler {
 					level = claims.Level
 				}
 				// 解析失败不报错 —— 当匿名继续
+			}
+
+			// JWT 里 level 不是 2 但能拿到 userID 时，回查一次 DB 拿最新 level
+			// （典型场景：用户被升级会员 / 会员过期，但 token 还是旧 level）
+			if resolve != nil && level < 2 && userID != "" {
+				if fresh := resolve(r.Context(), userID); fresh > level {
+					level = fresh
+				}
 			}
 
 			ctx := r.Context()
