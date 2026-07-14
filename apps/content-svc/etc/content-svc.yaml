@@ -26,3 +26,9 @@ Log:
 Auth:
   AccessSecret: your-secret-key-change-in-production
   AccessExpire: 86400
+
+# 付费墙开关
+# true: 按 user level 拦截（L0/L1 看不了 L2 内容）
+# false: 全员可读完整内容（默认）
+Paywall:
+  Enabled: false

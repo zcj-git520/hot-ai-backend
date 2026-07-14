@@ -25,3 +25,9 @@ Cors:
   AllowOrigins: "*"
   AllowMethods: "*"
   AllowHeaders: "*"
+
+# 付费墙开关
+# true: 按 user level 拦截
+# false: 全员可读完整内容（默认）
+Paywall:
+  Enabled: false

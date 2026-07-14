@@ -5,6 +5,7 @@
 package access
 
 import (
+	"sync/atomic"
 	"time"
 
 	"hot-ai-backend/internal/models"
@@ -12,6 +13,21 @@ import (
 
 // 默认游客预览字数（按 rune 计）
 const GuestPreviewChars = 500
+
+// paywallEnabled 是否启用付费墙。true = 按 level 拦截；false = 所有人可读。
+// 默认 false（全员可读），由各服务 main 启动时根据 YAML 中的 Paywall.Enabled 写入。
+// 用 atomic.Bool 是因为读多写少（启动写一次，请求读），并发安全。
+var paywallEnabled atomic.Bool
+
+// SetPaywallEnabled 设置是否启用付费墙。建议在 main 启动时调用一次。
+func SetPaywallEnabled(enabled bool) {
+	paywallEnabled.Store(enabled)
+}
+
+// PaywallEnabled 返回当前付费墙是否启用。
+func PaywallEnabled() bool {
+	return paywallEnabled.Load()
+}
 
 // LevelName 级别名称（给前端 / 日志用）
 func LevelName(level int) string {
@@ -36,7 +52,13 @@ type Decision struct {
 // Decide 是否允许访问完整内容
 // userLevel: 请求方身份级别（0/1/2）
 // contentLevel: 内容要求的级别（0/1/2）
+//
+// 付费墙关闭时直接放行（无论 userLevel/contentLevel），让所有用户可读完整内容。
+// 付费墙开启时才走 level 比对。
 func Decide(userLevel int, contentLevel int) Decision {
+	if !paywallEnabled.Load() {
+		return Decision{Allow: true, Reason: "paywall_disabled"}
+	}
 	if userLevel >= contentLevel {
 		return Decision{Allow: true}
 	}
